@@ -14,6 +14,7 @@ Author: Gregory Jordan <gjuggler@gmail.com>
 Depends:
     ape,
     ggplot2,
+    proto,
     plyr
 Enhances: ape
 Suggests:
@@ -21,8 +22,8 @@ Suggests:
 License: GPL-2
 LazyData: true
 Collate:
-    'write.tree.R'
-    'tree.R'
-    'aln.R'
-    'tree.plot.R'
-    'read.tree.R'
+    'aln.r'
+    'read.tree.r'
+    'tree.plot.r'
+    'tree.r'
+    'write.tree.r'

@@ -1,0 +1,28 @@
+Package: ggphylo
+Title: Tools for laying out and plotting phylogenetic data
+    (trees and alignments) with ggplot.
+Description: ggphylo is a set of functions for producing expressive
+    visualizations of phylogenetic data using ggplot. Its main features
+    include plotting a tree alongside its alignment and using tree
+    annotations to modulate visual elements of the plot (e.g. line width,
+    node size). Various convenience methods are also included for working
+    more easily with ape's phylo objects.
+URL: http://github.com/gjuggler/ggphylo
+Version: 0.1
+Maintainer: Gregory Jordan <gjuggler@gmail.com>
+Author: Gregory Jordan <gjuggler@gmail.com>
+Depends:
+    ape,
+    ggplot2,
+    plyr
+Enhances: ape
+Suggests:
+    plyr
+License: GPL-2
+LazyData: true
+Collate:
+    'write.tree.R'
+    'tree.R'
+    'aln.R'
+    'tree.plot.R'
+    'read.tree.R'

@@ -1,0 +1,5 @@
+ggphylo 0.1
+============
+
+Initial release of ggphylo. Supports only tree plotting; alignment
+plotting functionality will be incorporated in a future release.

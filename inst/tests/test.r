@@ -87,4 +87,31 @@ test_that("Tree manipulations work", {
   expect_true(fn(tree) > fn(b))
   expect_true(fn(b) > fn(a))
   expect_true(is.na(fn(c)))
+
+  # Try translating leaf and node labels
+  str <- '((a,b),c)d;'
+  tree <- tree.read(str)
+  map <- list(
+    a = 'AAAAAAmazing!',
+    b = 'Boo-ya',
+    c = 'Cowabunga!',
+    d = 'Duuude...'
+  )
+  tree <- tree.translate(tree, map)
+  expect_true(length(tree.find(tree, 'Boo-ya')) > 0)
+  expect_true(length(tree.find(tree, 'Cowabunga!')) > 0)
+  expect_true(length(tree.find(tree, 'Duuude...')) > 0)
+
+  # Try adding a tag to a tree.
+  str <- '((a,b),c)d;'
+  tree <- tree.read(str)
+  tree <- tree.set.tag(tree, tree.find(tree, 'b'), 'foo', 'bar')
+  expect_true(tree.has.tags(tree))
+  expect_true(tree.get.tag(tree, tree.find(tree, 'b'), 'foo') == 'bar')
+
+})
+
+context("tree plots")
+test_that("Tree plots work", {
+
 })

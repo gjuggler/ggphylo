@@ -72,8 +72,8 @@ tree.read.nhx <- function(str, coming.from.tree.read=F) {
 
   # Replace the labels with the true labels.
   tree$.tags <- list()
-  for (i in 1:(tree$Nnode+length(tree$tip.label))) {
-    tree$.tags[[i]] <- list()
+  for (i in nodes(tree)) {
+    tree$.tags[[i]] <- NA
   }
 
   for (i in 1:length(match.pos)) {

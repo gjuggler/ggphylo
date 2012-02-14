@@ -27,3 +27,4 @@ Collate:
     'tree.plot.r'
     'tree.r'
     'write.tree.r'
+    'info.r'

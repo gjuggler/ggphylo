@@ -1,3 +1,83 @@
+#' Returns a vector of node indices for all nodes (leaves plus internal nodes) in the tree.
+#'
+#' @param phylo input phylo object
+#' @return integer vector with the node indices for all nodes
+#' @export
+nodes <- function(phylo) {
+  n.nodes <- length(phylo$tip.label) + phylo$Nnode
+  1:n.nodes
+}
+
+#' Returns a vector of node indices for all the leaves in the tree.
+#'
+#' @param phylo input phylo object
+#' @return integer vector, with the node indices for all leaves
+#' @export
+leaves <- function(phylo) {
+  n.leaves <- length(phylo$tip.label)
+  1:n.leaves
+}
+
+#' Returns the label for the given node. Alias for \code{\link{tree.label.for.node}}. Given
+#' a nice short nickname due to its usefulness.
+#' 
+#' @method label phylo
+#' @param phylo, input phylo object
+#' @param node, the node index for the desired label
+#' @export
+label.phylo <- function(phylo, node) {
+  tree.label.for.node(phylo, node)
+}
+
+#' @export
+label <- function(object, ...) {
+  UseMethod("label")
+}
+
+#' Returns the index of the node with a given label.
+#'
+#' @param phylo input phylo object
+#' @param label character, the label to search for in the tree.
+#' @return integer vector corresponding to the indices of all nodes with the given
+#' label. Returns a zero-length vector if no nodes matched.
+#' @export
+tree.node.with.label <- function(phylo, label) {
+  all.labels <- c(phylo$tip.label, phylo$node.label)
+  return(which(all.labels %in% label))
+}
+
+#' Returns the index of the node with a given label. Alias for \code{\link{tree.node.with.label}}.
+#' @param phylo input phylo object
+#' @param label character, the label to search for in the tree.
+#' @return integer vector corresponding to the indices of all nodes with the given
+#' label. Returns a zero-length vector if no nodes matched.
+#' @export
+tree.find <- function(...) {
+  tree.node.with.label(...)
+}
+
+#' Translates all labels in the tree based on a list of label mappings.
+#'
+#' @param phylo input phylo object
+#' @param map a list of key-value pairs by which to translate node labels
+#' @return phylo, the original tree with all matching labels mapped to their new values.
+#' @export
+#' @examples
+#' # Translate a tree of NCBI taxa to their common names
+#' taxon.tree <- read.tree('((9606,9598),9593);')
+#' taxon.map <- list('9606'='Human', '9598'='Chimpanzee', '9593'='Gorilla')
+#' readable.tree <- tree.translate(taxon.tree, taxon.map)
+#' print(as.character(readable.tree)) # ((Human,Chimpanzee),Gorilla)
+tree.translate <- function(phylo, map) {
+  for (node in nodes(phylo)) {
+    lbl <- label(phylo, node)
+    if (!is.null(lbl) && !is.null(map[[lbl]])) {
+      phylo <- tree.set.label(phylo, node, map[[lbl]])
+    }
+  }
+  phylo
+}
+
 #' Retrieves a named tag from the given node. Tags are usually loaded
 #' via NHX annotations when reading a tree file or string (see
 #' \code{\link{tree.read}}) or by loading data from an external data frame
@@ -37,15 +117,52 @@ tree.get.tag <- function(phylo, node, tag) {
 #' tree <- tree.read('((a,b[&&NHX:foo=bar]),c);')
 #' tree.get.tags(tree, tree.node.with.label(tree, 'b')) # foo => bar
 tree.get.tags <- function(phylo, node) {
-  if (is.null(phylo$.tags)) {
+  if (!tree.has.tags(phylo)) {
     return(list())
   }
+  
   tags <- phylo$.tags[[node]]
-  if (is.null(tags)) {
+  #print(paste(label(phylo, node), tags))
+  if (is.null(tags) || is.na(tags)) {
     return(list())
   } else {
     return(tags)
   }
+}
+
+#' Retrieves a list of all tags for the given node. Convenience wrapper around \code{\link{tree.get.tags}}.
+#' @method tags phylo
+#' @export
+tags.phylo <- function(phylo, node) {
+  tree.get.tags(phylo, node)
+}
+
+#' @export
+tags <- function(object, ...) {
+  UseMethod("tags")
+}
+
+#' Sets the tag for a given node to the specified value. Returns the
+#' same tree structure with the new tag in place.
+#' 
+#' @param phylo input phylo object
+#' @param node integer, the index of the node whose tag will be set
+#' @param tag string, the tag to set
+#' @param value string, the value to set
+#' @return phylo, the phylo object with the new tag
+#' @export
+#' @examples
+#' tree <- tree.read('((a,b),c)d;')
+#' tree.set.tag(tree, tree.find('b'), 'foo', 'bar')
+tree.set.tag <- function(phylo, node, tag, value) {
+  if (!tree.has.tags(phylo)) {
+    phylo$.tags <- as.list(rep(NA, length(nodes(phylo))))
+  }
+
+  tags.l <- tags(phylo, node)
+  tags.l[[tag]] <- value
+  phylo$.tags[[node]] <- tags.l
+  phylo
 }
 
 #' Determines whether the given phylo object contains tags or not.
@@ -138,8 +255,6 @@ tree.as.data.frame <- function(tree, order.visually=T) {
   }
   tree.df
 }
-
-
 
 #' Removes internal node labels from a tree
 #'
@@ -261,28 +376,6 @@ tree.depth.to.root <- function(phylo,node) {
     cur.node.b <- cur.node.a # Move up to the next edge
   }
   return(length)
-}
-
-#' Returns the index of the node with a given label.
-#'
-#' @param phylo input phylo object
-#' @param label character, the label to search for in the tree.
-#' @return integer vector corresponding to the indices of all nodes with the given
-#' label. Returns a zero-length vector if no nodes matched.
-#' @export
-tree.node.with.label <- function(phylo, label) {
-  all.labels <- c(phylo$tip.label, phylo$node.label)
-  return(which(all.labels %in% label))
-}
-
-#' Returns the index of the node with a given label. Alias for \code{\link{tree.node.with.label}}.
-#' @param phylo input phylo object
-#' @param label character, the label to search for in the tree.
-#' @return integer vector corresponding to the indices of all nodes with the given
-#' label. Returns a zero-length vector if no nodes matched.
-#' @export
-tree.find <- function(...) {
-  tree.node.with.label(...)
 }
 
 #' Replaces the label of a given node and returns a new phylo object
@@ -552,7 +645,7 @@ tree.parent.node <- function(phylo, node) {
 #' @export
 order.nodes.visually <- function(phylo) {
   phylo <- reorder(phylo, order="cladewise");
-  df.list <- phylo.layout.df(phylo,
+  df.list <- tree.layout(phylo,
     layout.ancestors=T
   )
   

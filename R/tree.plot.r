@@ -1,33 +1,6 @@
-### Allow lineend="round" for geom_segment
-# See https://groups.google.com/forum/?fromgroups#!topic/ggplot2/movv0f_MSuY
-GeomJoinedSegment <- proto(ggplot2:::GeomSegment, {
- objname <- "geom_joinedsegment"
- draw <- function(., data, scales, coordinates, arrow=NULL, ...) {
-   if (is.linear(coordinates)) {
-     return(with(coord_transform(coordinates, data, scales),
-
-       segmentsGrob(x, y, xend, yend, default.units="native",
-       gp = gpar(col=alpha(colour, alpha), lwd=size * .pt,
-         lty=linetype, lineend = "round"),
-       arrow = arrow)
-     ))
-   }
-    data$group <- 1:nrow(data)
-    starts <- subset(data, select = c(-xend, -yend))
-    ends <- rename(subset(data, select = c(-x, -y)), c("xend" = "x", "yend" = "y"))
-    
-    pieces <- rbind(starts, ends)
-    pieces <- pieces[order(pieces$group),]
-    
-    GeomPath$draw_groups(pieces, scales, coordinates, arrow = arrow, lineend="round", ...)
-}})
-geom_joinedsegment <- function(mapping = NULL, data = NULL, stat =
-"identity", position = "identity", arrow = NULL, ...)  {
-  GeomJoinedSegment$new(mapping = mapping, data = data, stat = stat,
-        position = position, arrow = arrow, ...)
-}
-###
-
+#' Plots a tree or a list of trees.
+#'
+#' @export
 tree.plot <- function(
   x,
   # Options common to both the tree and aln plots.
@@ -68,7 +41,7 @@ tree.plot <- function(
 
   if (is.list(x) && !is.tree(x)) {
     layout.df <- ldply(x, function(cur.tree) {
-      out.df <- phylo.layout.df(cur.tree,
+      out.df <- tree.layout(cur.tree,
         layout.ancestors = plot.ancestors
       )
       out.df
@@ -91,7 +64,7 @@ tree.plot <- function(
       aln <- NA
     }
 
-    layout.df <- phylo.layout.df(phylo,
+    layout.df <- tree.layout(phylo,
       layout.ancestors=plot.ancestors
     )
     trees.df <- data.frame(
@@ -214,7 +187,7 @@ tree.plot <- function(
     q <- q + opts(panel.grid.major = theme_blank())
   }
 
-  q <- q + tree.plot.options()
+  q <- q + theme_phylo_default()
 
   if (do.plot) {
     print(q)
@@ -222,8 +195,10 @@ tree.plot <- function(
   return(invisible(q))
 }
 
-# Returns a data frame defining segments to draw the phylogenetic tree.
-phylo.layout.df <- function(
+#' Returns a data frame defining segments to draw the phylogenetic tree.
+#' 
+#' @export
+tree.layout <- function(
   phylo,
   layout.ancestors = FALSE,
   align.seq.names = NA
@@ -411,15 +386,98 @@ tags.into.df <- function(phylo, df) {
   return(df)
 }
 
+#' A mostly-blank theme for simple plots.
+#' Ruthlessly taken from ggdendro, courtesy of Andrie de Vries
+#' http://cran.r-project.org/web/packages/ggdendro/index.html
+#' 
+#' @export
+theme_phylo_blank <- function(){
+  stopifnot(require(ggplot2))
+  theme_blank <- ggplot2::theme_blank
+  ggplot2::opts(
+      panel.grid.major = theme_blank(),
+      panel.grid.minor = theme_blank(),
+      panel.background = theme_blank(),
+      axis.title.x = theme_text(colour=NA),
+      axis.title.y = theme_blank(),
+      axis.text.x = theme_blank(),
+      axis.text.y = theme_blank(),
+      axis.line = theme_blank(),
+      axis.ticks = theme_blank()
+  )
+}
 
-tree.plot.options <- function() {
-  library(grid)
-  return(opts(
+theme_phylo_black <- function() {
+  stopifnot(require(ggplot2))
+  theme_blank <- ggplot2::theme_blank
+  ggplot2::opts(
+      panel.grid.major = theme_segment(colour = "white"),
+      panel.grid.minor = theme_segment(colour="white"),
+      panel.background = theme_rect(fill = "black", colour = "black"),
+      axis.title.x = theme_text(colour='white'),
+      axis.title.y = theme_text(colour='white'),
+      axis.text.x = theme_text(colour='white'),
+      axis.text.y = theme_text(colour='white'),
+      axis.line = theme_segment(colour='white'),
+      axis.ticks = theme_segment(colour='white')
+  )
+}
+
+theme_phylo_black <- function() {
+  stopifnot(require(ggplot2))
+  theme_blank <- ggplot2::theme_blank
+  ggplot2::opts(
+      panel.grid.major = theme_segment(colour = "white"),
+      panel.grid.minor = theme_segment(colour="white"),
+      panel.background = theme_rect(fill = "black", colour = "black"),
+      axis.title.x = theme_text(colour='white'),
+      axis.title.y = theme_text(colour='white'),
+      axis.text.x = theme_text(colour='white'),
+      axis.text.y = theme_text(colour='white'),
+      axis.line = theme_segment(colour='white'),
+      axis.ticks = theme_segment(colour='white')
+  )
+}
+
+
+theme_phylo_default <- function() {
+  stopifnot(require(ggplot2))
+  stopifnot(require(grid))
+  ggplot2::opts(
     plot.margin = unit(c(0,0,0,0),'npc'),
     axis.title.y = theme_blank(),
     plot.background = theme_blank(),
-#    panel.grid.minor = theme_blank(),
-#    panel.grid.major = theme_blank(),
     panel.border = theme_blank()
-  ))
+  )
+}
+
+#' Create a geom_joinedsegment which joins together segments with 'round' corners. Looks MUCH nicer.
+#' See https://groups.google.com/forum/?fromgroups#!topic/ggplot2/movv0f_MSuY
+GeomJoinedSegment <- proto(ggplot2:::GeomSegment, {
+ objname <- "geom_joinedsegment"
+ draw <- function(., data, scales, coordinates, arrow=NULL, ...) {
+   if (is.linear(coordinates)) {
+     return(with(coord_transform(coordinates, data, scales),
+
+       segmentsGrob(x, y, xend, yend, default.units="native",
+       gp = gpar(col=alpha(colour, alpha), lwd=size * .pt,
+         lty=linetype, lineend = "round"),
+       arrow = arrow)
+     ))
+   }
+    data$group <- 1:nrow(data)
+    starts <- subset(data, select = c(-xend, -yend))
+    ends <- rename(subset(data, select = c(-x, -y)), c("xend" = "x", "yend" = "y"))
+    
+    pieces <- rbind(starts, ends)
+    pieces <- pieces[order(pieces$group),]
+    
+    GeomPath$draw_groups(pieces, scales, coordinates, arrow = arrow, lineend="round", ...)
+}})
+
+#' Create the function for geom_joinedsegment
+geom_joinedsegment <- function(mapping = NULL, data = NULL, stat =
+"identity", position = "identity", arrow = NULL, ...)  {
+  GeomJoinedSegment$new(mapping = mapping, data = data, stat = stat,
+        position = position, arrow = arrow, ...)
 }

@@ -1,0 +1,57 @@
+% This vignette was taken from ggdendro and ruthlessly gutted for adaptation to the current package.
+% Thanks to Andrie de Vries: https://github.com/andrie/
+
+% \VignetteIndexEntry{Plotting phylogenetic trees and alignments with ggplot}
+% \VignettePackage{ggphylo}
+% \VignetteKeyword{phylogenetics}
+% \VignetteKeyword{alignment}
+% \VignetteKeyword{ggplot}
+
+% Definitions
+\newcommand{\ggphylo}{\texttt{ggphylo}\xspace}
+\newcommand{\code}[1]{\texttt{#1}\xspace}
+\newcommand{\ggplot}{\texttt{ggplot}\xspace}
+\newcommand{\phylo}{\code{phylo}\xspace}
+
+\documentclass[10pt,oneside]{article}
+
+\usepackage{xspace}
+
+\begin{document}
+\pagestyle{empty}
+
+\setlength{\baselineskip}{1.25em}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0.0em}
+
+%\begin{titlepage}
+\title{Using \ggphylo and \ggplot to visualize phylogenetic trees and alignments}
+\author{Gregory Jordan}
+%\end{titlepage}
+\maketitle{}
+
+\ggphylo is a package that provides a useful PI for manipulating
+\phylo and alignment objects from R and plotting them using
+\ggplot{}. Annotations can be loaded from NHX formatted trees or from
+associated CSV files and plotted in a simple, flexible way.
+
+\section{Introduction}
+  
+<<initialise, echo=TRUE>>=
+library(ggplot2)
+library(ggphylo)
+@
+
+%------------------------------------------------------------------------------
+\section{Loading and plotting a tree}
+
+The main work of the \ggphylo package is to transform the data from a
+\phylo object into a data frame more appropriate for use with \ggplot. This is normally taken care of internally by the \code{tree.plot} function, but we can see what's happening by calling the \code{tree.layout} method directly:
+
+<<dendrogram, fig=FALSE, include=TRUE, keep.source=TRUE>>=
+tree <- tree.read('((a,b),c);')
+tree.df <- tree.layout(tree)
+print(tree.df)
+@
+
+\end{document}

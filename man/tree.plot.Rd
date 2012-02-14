@@ -1,6 +1,6 @@
 \name{tree.plot}
 \alias{tree.plot}
-\title{Plots a tree.}
+\title{Plots a tree or a list of trees.}
 \usage{
   tree.plot(x, plot.ancestors = T, axis.text.size = 5,
     keep.aspect.ratio = F, radial.plot = F, do.plot = T,
@@ -14,6 +14,6 @@
     label.color.by = NA, y.lim = NA, ...)
 }
 \description{
-  Plots a tree.
+  Plots a tree or a list of trees.
 }
 

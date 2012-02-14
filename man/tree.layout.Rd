@@ -2,8 +2,8 @@
 \alias{tree.layout}
 \title{Returns a data frame defining segments to draw the phylogenetic tree.}
 \usage{
-  tree.layout(phylo, layout.ancestors = FALSE,
-    align.seq.names = NA)
+  tree.layout(phylo, layout = "default",
+    layout.ancestors = FALSE, align.seq.names = NA)
 }
 \description{
   Returns a data frame defining segments to draw the

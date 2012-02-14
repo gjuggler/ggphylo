@@ -56,6 +56,20 @@ tree.find <- function(...) {
   tree.node.with.label(...)
 }
 
+#' Returns the index of the root node in the tree, or NA if there is no root
+#'
+#' @param phylo input phylo object
+#' @return integer vector corresponding to the index of the root node, or NA if there is no root.
+#' @export
+tree.get.root <- function(phylo) {
+  which.match <- which(!(nodes(phylo) %in% phylo$edge[, 2]))
+  if (length(which.match) > 0) {
+    which.match[1]
+  } else {
+    NA
+  }
+}
+
 #' Translates all labels in the tree based on a list of label mappings.
 #'
 #' @param phylo input phylo object
@@ -300,6 +314,10 @@ tree.normalize.branchlengths <- function(phylo, push.to.tips=F) {
   n.leaves <- length(phylo$tip.label)
   n.nodes <- length(phylo$tip.label)+phylo$Nnode
 
+  if (is.null(phylo$edge.length)) {
+    phylo$edge.length <- rep(NA, n.nodes)
+  }
+
   max.depth <- 0
   for (i in 1:n.nodes) {
     depth <- tree.depth.to.root(phylo, i)
@@ -312,7 +330,7 @@ tree.normalize.branchlengths <- function(phylo, push.to.tips=F) {
     parent.node <- tree.parent.node(phylo, i)
     edge.index <- which(phylo$edge[,2]==i)
 
-    is.leaf <- i <= n.leaves
+    is.leaf <- tree.is.leaf(phylo, i)
 
     if (is.leaf) {
       cur.count <- 1
@@ -320,7 +338,7 @@ tree.normalize.branchlengths <- function(phylo, push.to.tips=F) {
       cur.count <- tree.leaves.beneath(phylo, i)
     }
 
-    if (parent.node > -1) {
+    if (parent.node > 0) {
       parent.count <- tree.leaves.beneath(phylo, parent.node)
       if (push.to.tips) {
         count.diff <- parent.count - cur.count
@@ -656,7 +674,7 @@ order.nodes.visually <- function(phylo) {
   )
   
   nodes <- subset(df.list, type=='node')
-  nodes[order(nodes$x), 'node']
+  nodes[order(nodes$y), 'node']
 }
 
 #' Sorts a data frame according to a tree. Requires the data frame to

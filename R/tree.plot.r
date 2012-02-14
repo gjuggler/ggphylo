@@ -1,36 +1,14 @@
 #' Plots a tree or a list of trees.
 #'
 #' @export
-tree.plot <- function(
+ggphylo <- function(
   x,
-  # Options common to both the tree and aln plots.
-  plot.ancestors = T,
-  keep.aspect.ratio = F,
-
-  radial.plot = F,
-
-  # Options just for the tree plot.
+  layout='default',
   do.plot = T,
-  show.y.gridlines = F,
-  plot.legend = T,
-  xlim = NA,
-  xlim.expand = c(0.05, 0.3),
-  xlab = "Branch Length",
-  labels.in.axis = F,
-  labels.in.tree = T,
-
-  node.plot = FALSE,
-  node.scale.by = NA,
-  node.size = 1,
-  node.color.by = NA,
-  node.color = 'black',
-
-  label.plot = TRUE,
-  label.scale.by = NA,
-  label.size = 4,
-  label.color.by = NA,
-  label.color = 'black',
-
+  plot.internals=F,
+  x.lab = "Branch Length",
+  x.lim = NA,
+  x.expand = c(0.05, 0.3),
   y.lim = NA,
   ...
 ){
@@ -42,7 +20,7 @@ tree.plot <- function(
 
     layout.df <- ldply(x, function(cur.tree) {
       out.df <- tree.layout(cur.tree,
-        layout.ancestors = plot.ancestors
+        layout = layout
       )
       out.df
     })
@@ -65,7 +43,7 @@ tree.plot <- function(
     }
 
     layout.df <- tree.layout(phylo,
-      layout.ancestors=plot.ancestors
+      layout = layout
     )
     trees.df <- data.frame(
       max.length = tree.max.length.to.root(phylo),
@@ -73,33 +51,21 @@ tree.plot <- function(
     )
   }
 
-  tree.df <- subset(layout.df, type=='line')
+  lines.df <- subset(layout.df, type=='line')
   nodes.df <- subset(layout.df, type=='node')
-
-  #print(head(nodes.df))
-
-#  names <- phylo$tip.label
-#  if (is.na(y.lim)) {
-#    y.lim <- c(0,length(names)+1)
-#    y.breaks <- 1:length(names)
-#    y.labels <- names
-#  }
+  labels.df <- subset(layout.df, type=='label')
 
   max.length <- max(trees.df$max.length)
   max.n <- max(trees.df$n.leaves)
 
-  q <- ggplot(tree.df)
-    
-  q <- q + opts(
-    axis.title.y = theme_blank()
-  )
+  q <- ggplot(lines.df)
 
-  args <- list(...)
-
+  args <- list(...)  
   for (aes.type in c('line', 'node', 'label')) {
-    plot.s <- paste(aes.type, 'plot', sep='.')
+    plot.s <- paste('plot', paste(aes.type, 's', sep=''), sep='.')
     
-    if (!is.null(args[plot.s])) {
+    if (is.null(args[[plot.s]]) || args[[plot.s]] == T) {
+      #print(paste(plot.s, args[[plot.s]]))
       aes.list <- switch(aes.type, 
         'line' = list(
           x='x',
@@ -120,21 +86,33 @@ tree.plot <- function(
 
       if (aes.type == 'line') {
         # Sort by y-axis (e.g., branch length) to get better z-axis consistency.
-        tree.df <- tree.df[order(tree.df$yend, tree.df$xend),]
+        lines.df <- lines.df[order(lines.df$yend, lines.df$xend),]
       }
       if (aes.type == 'label') {
-        leaf.nodes <- subset(nodes.df, is.leaf==TRUE)
-        text.nodes <- leaf.nodes
-        text.margin <- 1 / 100
-        if (!is.null(args[['plot.node']])) {
-          text.margsin <- text.margin * 2
+        if (!plot.internals) {
+          labels.df <- subset(labels.df, is.leaf==TRUE)
         }
-        text.nodes$y <- text.nodes$y + max.length * text.margin
-        if (radial.plot) {
-          aes.list[['angle']] <- '-360 * (x)/(diff(range(x))+1) + 90;'
+
+        # Add a bit of margin to the labels
+        text.margin <- 1 / 50
+        mrgn <- text.margin * max.length
+        
+        if (layout == 'radial') {
+          labels.df$y <- labels.df$y + mrgn * sin(labels.df$angle / 180 * pi)
+          labels.df$x <- labels.df$x + mrgn * cos(labels.df$angle / 180 * pi)
+          aes.list[['angle']] <- 'pmax((y/(diff(range(y))+1) * -360) %% 360 + 90, (y/(diff(range(y))+1) * -360 - 180) %% 360 + 90)'
+          aes.list[['hjust']] <- 'ifelse( (-360 * (y)/(diff(range(y))+1)) %% 360 + 90 > (-360 * (y)/(diff(range(y))+1) - 180) %% 360 + 90, 0, 1);'
+        } else {
+          labels.df$hjust <- ifelse((labels.df$angle-90) %% 360 > (labels.df$angle-90+180) %% 360, 0, 1)
+          labels.df$angle <- pmax((labels.df$angle-90) %% 360, (labels.df$angle-90+180) %% 360) + 90
+          labels.df$y <- labels.df$y + mrgn * sin(labels.df$angle / 180 * pi) * ifelse(labels.df$hjust == 1, -1, 1)
+          labels.df$x <- labels.df$x + mrgn * cos(labels.df$angle / 180 * pi) * ifelse(labels.df$hjust == 1, -1, 1)
+          aes.list[['angle']] <- 'angle'
+          aes.list[['hjust']] <- 'hjust'
         }
       }
 
+      # Add an aesthetic entry when we have the appropriate argument, e.g. node.color.by='pop.size' => color='pop.size'
       for (sub.aes in c('color', 'alpha', 'size')) {
         scale.key <- ifelse(sub.aes == 'color', 'colour', sub.aes)
         cur.s <- paste(aes.type, sub.aes, 'by', sep='.')
@@ -144,20 +122,61 @@ tree.plot <- function(
       }
 
       geom.list <- switch(aes.type,
-        'line' = list(
-          data=tree.df,
+        'line'=list(
+          data=lines.df,
           do.call(aes_string, aes.list)
         ),
-        'node' = list(
+        'node'=list(
           data=nodes.df,
           do.call(aes_string, aes.list)
         ),
-        'label' = list(
-          data=text.nodes,
-          hjust=0,
+        'label'=list(
+          data=labels.df,
+          vjust=0.5,
           do.call(aes_string, aes.list)
         )
       )      
+
+      if (is.null(aes.list[['hjust']]) && aes.type == 'label') {
+        geom.list[['hjust']] <- 0
+      }
+
+      # Default values when the visual properties are constants.
+      constant.defaults <- switch(aes.type,
+        'line'=list(
+          color='#888888',
+          size=1,
+          alpha=1
+        ),
+        'node'=list(
+          color='#333333',
+          size=1.5,
+          alpha=1
+        ),
+        'label'=list(
+          color='black',
+          size=3,
+          alpha=1
+        )
+      )
+
+      # Add constant values if there is no aesthetic entry, e.g. node.color='black' => color='black'
+      for (sub.aes in c('color', 'alpha', 'size')) {
+        constant.key <- ifelse(sub.aes == 'color', 'colour', sub.aes)
+        constant.s <- paste(aes.type, sub.aes, sep='.')
+        by.s <- paste(aes.type, sub.aes, 'by', sep='.')
+        # If we don't have an aesthetic
+        if (is.null(args[[by.s]])) {
+          # If we don't have a user-specified constant
+          if (is.null(args[[constant.s]])) {
+            # Then use the default value
+            geom.list[[constant.key]] <- constant.defaults[[sub.aes]]
+          } else {
+            # We have a user-specified constant -- use it
+            geom.list[[constant.key]] <- args[[constant.s]]
+          }
+        }
+      }
       
       geom.fn <- switch(aes.type,
         line='geom_joinedsegment',
@@ -166,53 +185,56 @@ tree.plot <- function(
       )
       q <- q + do.call(geom.fn, geom.list)
       
+      # Add the scale indicators, e.g. node.color.scale=scale_color_gradient(low='blue', hi='red')
       for (sub.aes in c('color', 'alpha', 'size')) {
-        cur.s <- paste(aes.type, sub.aes, 'scale', sep='.')
-        if (!is.null(args[cur.s])) {
-          q <- q + args[[cur.s]]
+        scale.s <- paste(aes.type, sub.aes, 'scale', sep='.')
+        if (!is.null(args[scale.s])) {
+          q <- q + args[[scale.s]]
         }
       }
     }
   }
 
-  # Tree x-limits.
-  if (!is.na(xlim)) {
-    tree.limits <- xlim
+  if (!is.na(x.lim)) {
+    bl.limits <- x.lim
   } else {
-    tree.limits <- c(0, max.length)
+    bl.limits <- range(lines.df$x)
   }
 
-  if (any(!is.na(xlim.expand))) {
-    range <- tree.limits[2] - tree.limits[1]
-    tree.limits[1] <- tree.limits[1] - range*xlim.expand[1]
-    tree.limits[2] <- tree.limits[2] + range*xlim.expand[2]
+  if (!is.na(y.lim)) {
+    leaf.limits <- y.lim
+  } else {
+    leaf.limits <- range(lines.df$y)
   }
 
-  if (radial.plot) {
-    q <- q + scale_x_continuous(limits=c(0, max.n))
-    q <- q + coord_polar(expand=F)
+  if (any(!is.na(x.expand))) {
+    if (layout == 'unrooted') {    
+      range <- leaf.limits[2] - leaf.limits[1]
+      leaf.limits[1] <- leaf.limits[1] - range*x.expand[1]
+      leaf.limits[2] <- leaf.limits[2] + range*x.expand[2]
+    }
+    range <- bl.limits[2] - bl.limits[1]
+    bl.limits[1] <- bl.limits[1] - range*x.expand[1]
+    bl.limits[2] <- bl.limits[2] + range*x.expand[2]
+  }
+
+  if (layout == 'radial') {
+    q <- q + scale_y_continuous(limits=c(0, max.n), name='')
+    q <- q + scale_x_continuous(name=x.lab)
+    q <- q + coord_polar(expand=F, theta="y")
     q <- q + opts(axis.text.x=theme_blank())
   } else {
-    q <- q + coord_flip()
-    q <- q + scale_y_continuous(name=xlab, limits=tree.limits)
-    q <- q + scale_x_continuous()
+    #q <- q + coord_flip()
+    q <- q + scale_x_continuous(name=x.lab, limits=bl.limits)
+    y.lab <- ifelse(layout == 'unrooted', x.lab, '')
+    q <- q + scale_y_continuous(name=y.lab, limits=leaf.limits)
   }
-
-#  q <- q + scale_x_continuous(limits=tree.limits, expand=c(0,0), name=xlab)
 
   if (nrow(trees.df) > 1) {
     q <- q + facet_wrap( ~ .id)
   }
 
-  if (!plot.legend) {
-    q <- q + opts(legend.position='none')
-  }
-
-  if (!show.y.gridlines) {
-    q <- q + opts(panel.grid.major = theme_blank())
-  }
-
-  q <- q + theme_phylo_default()
+#  q <- q + theme_phylo_default()
 
   if (do.plot) {
     print(q)
@@ -220,11 +242,16 @@ tree.plot <- function(
   return(invisible(q))
 }
 
+is.standard.layout <- function(x) {
+  any(x %in% c('default', 'radial'))
+}
+
 #' Returns a data frame defining segments to draw the phylogenetic tree.
 #' 
 #' @export
 tree.layout <- function(
   phylo,
+  layout = 'default',
   layout.ancestors = FALSE,
   align.seq.names = NA
 ) {
@@ -241,6 +268,7 @@ tree.layout <- function(
   # Create the skeleton data frame.
   df <- data.frame(
                    node=c(1:n.nodes),                                            # Nodes with IDs 1 to N.
+                   angle=0,
                    x=0,                                                          # These will contain the x and y coordinates after the layout procedure below.
                    y=0,
                    label=c(t.labels, n.labels),            # The first n.leaves nodes are the labeled tips.
@@ -270,42 +298,82 @@ tree.layout <- function(
 
   found.any.internal.node.sequences <- FALSE
 
-  # For each leaf: travel up towards the root, laying out each internal node along the way.
-  for (i in 1:n.leaves) {
-    cur.node <- i
-    while (length(cur.node) > 0 && cur.node != -1) {
-      # We always use branch lengths: x-position is simply the length to the root.
-      df[cur.node,]$x <- tree.length.to.root(phylo,cur.node)
+  if (is.standard.layout(layout)) {
+    # For each leaf: travel up towards the root, laying out each internal node along the way.
+    for (i in 1:n.leaves) {
+      cur.node <- i
+      while (length(cur.node) > 0 && cur.node != -1) {
+        df[cur.node, 'angle'] <- 0
 
-      # The y-position for internal nodes is the mean of the y-position of all children.
-      children <- unlist(df[cur.node,]$children)
-      if (length(children) > 0 && children[1] != -1) {
-        child.y.sum <- 0
-        for (i in 1:length(children)) {
-          child.index <- children[i]
-          cur.y <- df[child.index,]$y
-          child.y.sum <- child.y.sum + cur.y
+        # We always use branch lengths: x-position is simply the length to the root.
+        df[cur.node,]$x <- tree.length.to.root(phylo,cur.node)
+
+        # The y-position for internal nodes is the mean of the y-position of all children.
+        children <- unlist(df[cur.node,]$children)
+        if (length(children) > 0 && children[1] != -1) {
+          child.y.sum <- 0
+          for (i in 1:length(children)) {
+            child.index <- children[i]
+            cur.y <- df[child.index,]$y
+            child.y.sum <- child.y.sum + cur.y
+          }
+          df[cur.node, ]$y <- (child.y.sum) / length(children)
         }
-        df[cur.node, ]$y <- (child.y.sum) / length(children)
-      }
 
-      # Try to find the index of this node in the alignment names.
-      if (!is.na(align.seq.names)) {
-        lbl <- df[cur.node,]$label
-        index.in.names <- which(align.seq.names == lbl | align.seq.names %in% c(paste('Node',lbl),paste('Root node',lbl)))
-        if (length(index.in.names)>0) {
-          df[cur.node,]$y <- index.in.names
-          if (!df[cur.node,]$is.leaf) {
-            found.any.internal.node.sequences <- TRUE
+        # Try to find the index of this node in the alignment names.
+        if (!is.na(align.seq.names)) {
+          lbl <- df[cur.node,]$label
+          index.in.names <- which(align.seq.names == lbl | align.seq.names %in% c(paste('Node',lbl),paste('Root node',lbl)))
+          if (length(index.in.names)>0) {
+            df[cur.node,]$y <- index.in.names
+            if (!df[cur.node,]$is.leaf) {
+              found.any.internal.node.sequences <- TRUE
+            }
           }
         }
-      }
 
-      cur.node <- unlist(df[cur.node,]$parent)
+        cur.node <- unlist(df[cur.node,]$parent)
+      }
     }
   }
 
-  df$dir <- 'node'
+  if (layout == 'unrooted') {
+    # See http://code.google.com/p/phylowidget/source/browse/trunk/PhyloWidget/src/org/phylowidget/render/LayoutUnrooted.java
+    # For unrooted layout, we start from the root.
+    layout.f <- function(node, lo, hi) {
+      cur.enclosed <- tree.leaves.beneath(phylo, node)
+      cur.x <- df[node, 'x']
+      cur.y <- df[node, 'y']
+
+      children <- unlist(df[node, ]$children)
+      if (length(children) > 0 && children[1] != -1) {
+        cur.angle <- lo
+        for (i in 1:length(children)) {
+          child.node <- children[i]
+          child.enclosed <- tree.leaves.beneath(phylo, child.node)
+          child.ratio <- child.enclosed / cur.enclosed
+          child.bl <- tree.branch.length(phylo, child.node)
+
+          arc.size <- (hi - lo) * child.ratio
+          mid.angle <- cur.angle + arc.size / 2
+          
+          child.x <- cur.x + cos(mid.angle) * child.bl
+          child.y <- cur.y + sin(mid.angle) * child.bl
+
+          df[child.node, 'x'] <<- child.x
+          df[child.node, 'y'] <<- child.y
+          df[child.node, 'angle'] <<- mid.angle / (2*pi) * 360
+
+          layout.f(child.node, cur.angle, cur.angle+arc.size)
+          cur.angle <- cur.angle + arc.size          
+        }        
+      }      
+    }
+    
+    layout.f(tree.get.root(phylo), 0, 2 * pi)
+  }
+
+  df$dir <- 'none'
 
   # We have a data frame with each node positioned.
   # Now we go through and make two line segments for each node (for a 'square corner' type tree plot).
@@ -316,61 +384,55 @@ tree.layout <- function(
       next; # Root node!
     }
     p.row <- df[row$parent,] # Data frame row for the parent node.
-    if (layout.ancestors && found.any.internal.node.sequences) {
+
+    if (is.standard.layout(layout) && !(layout.ancestors && found.any.internal.node.sequences)) {
       horiz.line <- data.frame(
                                node=row$node,
-                               y=row$x,
-                               yend=p.row$x,
-                               x=row$y,
-                               xend=p.row$y,
-                               label=row$label,
-                               dir='horiz',
+                               y=row$y,
+                               yend=row$y,
+                               x=row$x,
+                               xend=p.row$x,
+                               label=row$label,   
+                               dir='up',
                                branch.length=row$branch.length
                                )
-      line.df <- rbind(line.df,horiz.line)
-    } else {
-      horiz.line <- data.frame(
-                               node=row$node,
-                               y=row$x,
-                               yend=p.row$x,
-                               x=row$y,
-                               xend=row$y,
-                               label=row$label,   
-                               dir='horiz',
-                               branch.length=row$branch.length
-                               )    # First a line from row.x to parent.
-      line.df <- rbind(line.df, horiz.line)
-
       vert.line <- data.frame(
                                node=row$node,
-                               y=p.row$x,
-                               yend=p.row$x,
-                               x=row$y,
-                               xend=p.row$y,
+                               y=row$y,
+                               yend=p.row$y,
+                               x=p.row$x,
+                               xend=p.row$x,
                                label=row$label,
-                               dir='vert',
+                               dir='across',
                                branch.length=row$branch.length
       )
-      line.df <- rbind(line.df, vert.line)
+      line.df <- rbind(line.df, horiz.line, vert.line)
+    } else {
+      up.line <- data.frame(
+                               node=row$node,
+                               y=row$y,
+                               yend=p.row$y,
+                               x=row$x,
+                               xend=p.row$x,
+                               label=row$label,
+                               dir='up',
+                               branch.length=row$branch.length
+                               )
+      line.df <- rbind(line.df, up.line)
     }
   }
 
   line.df <- tags.into.df(phylo, line.df)
   df <- tags.into.df(phylo, df)
-
   # Remove weird list-of-lists from the nodes data frame.
   df$children <- NULL
 
-  line.df <- line.df[rev(1:nrow(line.df)),]
-  df <- df[rev(1:nrow(df)),]
-
-  old.x <- df$x
-  df$x <- df$y  
-  df$y <- old.x
-
+  label.df <- df
   line.df$type <- 'line'
   df$type <- 'node'
-  all.df <- rbind.fill(line.df, df)
+  label.df$type <- 'label'
+
+  all.df <- rbind.fill(line.df, df, label.df)
   all.df
 }
 
@@ -445,7 +507,6 @@ theme_phylo_default <- function() {
   stopifnot(require(grid))
   ggplot2::opts(
     plot.margin = unit(c(0,0,0,0),'npc'),
-    axis.title.y = theme_blank(),
     plot.background = theme_blank(),
     panel.border = theme_blank()
   )

@@ -5,7 +5,6 @@ tree.plot <- function(
   x,
   # Options common to both the tree and aln plots.
   plot.ancestors = T,
-  axis.text.size = 5,
   keep.aspect.ratio = F,
 
   radial.plot = F,
@@ -20,26 +19,27 @@ tree.plot <- function(
   labels.in.axis = F,
   labels.in.tree = T,
 
-  line.plot = TRUE,
-  line.size = 1.5,
-  line.size.by = NA,
-  line.color.by = NA,
-
   node.plot = FALSE,
+  node.scale.by = NA,
   node.size = 1,
-  node.size.by = NA,
   node.color.by = NA,
+  node.color = 'black',
 
   label.plot = TRUE,
+  label.scale.by = NA,
   label.size = 4,
-  label.size.by = NA,
   label.color.by = NA,
+  label.color = 'black',
 
   y.lim = NA,
   ...
 ){
 
   if (is.list(x) && !is.tree(x)) {
+    if (is.null(names(x))) {
+      names(x) <- paste("Tree #", 1:length(x), sep='')
+    }
+
     layout.df <- ldply(x, function(cur.tree) {
       out.df <- tree.layout(cur.tree,
         layout.ancestors = plot.ancestors
@@ -91,63 +91,88 @@ tree.plot <- function(
   q <- ggplot(tree.df)
     
   q <- q + opts(
-    axis.text.y = theme_text(size=axis.text.size,hjust=1),
     axis.title.y = theme_blank()
   )
+
+  args <- list(...)
+
+  for (aes.type in c('line', 'node', 'label')) {
+    plot.s <- paste(aes.type, 'plot', sep='.')
     
-  # This creates the layer with the tree branches.
-  if (line.plot) {
-    aes.list <- list(
-      x='x',
-      y='y',
-      xend='xend',
-      yend='yend'
-    )
-    if (!is.na(line.color.by)) {
-      aes.list[['colour']] <- line.color.by
-    }
-    if (!is.na(line.size.by)) {
-      aes.list[['size']] <- line.size.by
-    }
-    q <- q + geom_joinedsegment(size=line.size, do.call(aes_string, aes.list))
-  }
+    if (!is.null(args[plot.s])) {
+      aes.list <- switch(aes.type, 
+        'line' = list(
+          x='x',
+          y='y',
+          xend='xend',
+          yend='yend'
+        ),
+        'node' = list(
+          x='x',
+          y='y'
+        ),
+        'label' = list(
+          x='x',
+          y='y',
+          label='label'
+        )
+      )
 
-  if (node.plot) {
-    aes.list <- list(
-      x='x',
-      y='y'
-    )
-    if (!is.na(node.size.by)) {
-      aes.list[['size']] <- node.size.by
-    }
-    if (!is.na(node.color.by)) {
-      aes.list[['colour']] <- node.color.by
-    }      
-    q <- q + geom_point(data=nodes.df, size=2, do.call(aes_string, aes.list))
-  }
+      if (aes.type == 'line') {
+        # Sort by y-axis (e.g., branch length) to get better z-axis consistency.
+        tree.df <- tree.df[order(tree.df$yend, tree.df$xend),]
+      }
+      if (aes.type == 'label') {
+        leaf.nodes <- subset(nodes.df, is.leaf==TRUE)
+        text.nodes <- leaf.nodes
+        text.margin <- 1 / 100
+        if (!is.null(args[['plot.node']])) {
+          text.margsin <- text.margin * 2
+        }
+        text.nodes$y <- text.nodes$y + max.length * text.margin
+        if (radial.plot) {
+          aes.list[['angle']] <- '-360 * (x)/(diff(range(x))+1) + 90;'
+        }
+      }
 
-  # Put labels directly into the tree
-  if (label.plot) {
-    leaf.nodes <- subset(nodes.df, is.leaf==TRUE)
-    aes.list <- list(
-      x='x',
-      y='y',
-      label='label'
-    )
-    if (!is.na(label.size.by)) {
-      aes.list[['size']] <- label.size.by
-    }
-    if (!is.na(label.color.by)) {
-      aes.list[['colour']] <- label.color.by
-    }      
-    if (radial.plot) {
-      aes.list[['angle']] <- '-360 * (x)/(diff(range(x))+1) + 90;'
-    }
+      for (sub.aes in c('color', 'alpha', 'size')) {
+        scale.key <- ifelse(sub.aes == 'color', 'colour', sub.aes)
+        cur.s <- paste(aes.type, sub.aes, 'by', sep='.')
+        if (!is.null(args[cur.s])) {
+          aes.list[[scale.key]] <- args[[cur.s]]
+        }
+      }
 
-    text.nodes <- leaf.nodes
-    text.margin <- 1 / 100
-    text.nodes$y <- text.nodes$y + max.length * text.margin
-    q <- q + geom_text(data=text.nodes, size=label.size, hjust=0, do.call(aes_string, aes.list))
+      geom.list <- switch(aes.type,
+        'line' = list(
+          data=tree.df,
+          do.call(aes_string, aes.list)
+        ),
+        'node' = list(
+          data=nodes.df,
+          do.call(aes_string, aes.list)
+        ),
+        'label' = list(
+          data=text.nodes,
+          hjust=0,
+          do.call(aes_string, aes.list)
+        )
+      )      
+      
+      geom.fn <- switch(aes.type,
+        line='geom_joinedsegment',
+        node='geom_point',
+        label='geom_text'
+      )
+      q <- q + do.call(geom.fn, geom.list)
+      
+      for (sub.aes in c('color', 'alpha', 'size')) {
+        cur.s <- paste(aes.type, sub.aes, 'scale', sep='.')
+        if (!is.null(args[cur.s])) {
+          q <- q + args[[cur.s]]
+        }
+      }
+    }
   }
 
   # Tree x-limits.
@@ -325,7 +350,6 @@ tree.layout <- function(
                                label=row$label,
                                dir='vert',
                                branch.length=row$branch.length
-          
       )
       line.df <- rbind(line.df, vert.line)
     }
@@ -369,13 +393,6 @@ tags.into.df <- function(phylo, df) {
     row <- df[i,]
     node <- row$node
     tags <- tree.get.tags(phylo, node)
-
-    # Always leave '0' value for tags in the vertical lines.
-    # This stops vertical lines from becoming red if the leftmost node
-    # has a tag value of 1
-    if (row$dir == 'vert') {
-      next()
-    }
 
     for (j in 1:length(tags)) {
       key <- names(tags)[j]
@@ -422,23 +439,6 @@ theme_phylo_black <- function() {
       axis.ticks = theme_segment(colour='white')
   )
 }
-
-theme_phylo_black <- function() {
-  stopifnot(require(ggplot2))
-  theme_blank <- ggplot2::theme_blank
-  ggplot2::opts(
-      panel.grid.major = theme_segment(colour = "white"),
-      panel.grid.minor = theme_segment(colour="white"),
-      panel.background = theme_rect(fill = "black", colour = "black"),
-      axis.title.x = theme_text(colour='white'),
-      axis.title.y = theme_text(colour='white'),
-      axis.text.x = theme_text(colour='white'),
-      axis.text.y = theme_text(colour='white'),
-      axis.line = theme_segment(colour='white'),
-      axis.ticks = theme_segment(colour='white')
-  )
-}
-
 
 theme_phylo_default <- function() {
   stopifnot(require(ggplot2))

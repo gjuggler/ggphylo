@@ -15,14 +15,15 @@
 
 \documentclass[10pt,oneside]{article}
 
+\usepackage{a4}
 \usepackage{xspace}
 
 \begin{document}
 \pagestyle{empty}
 
-\setlength{\baselineskip}{1.25em}
-\setlength{\parskip}{0.5em}
-\setlength{\parindent}{0.0em}
+%\setlength{\baselineskip}{1.25em}
+%\setlength{\parskip}{0.5em}
+%\setlength{\parindent}{0.0em}
 
 %\begin{titlepage}
 \title{Using \ggphylo and \ggplot to visualize phylogenetic trees and alignments}
@@ -35,23 +36,144 @@
 \ggplot{}. Annotations can be loaded from NHX formatted trees or from
 associated CSV files and plotted in a simple, flexible way.
 
-\section{Introduction}
-  
-<<initialise, echo=TRUE>>=
+<<initialise, echo=FALSE>>=
 library(ggplot2)
 library(ggphylo)
+set.seed(1)
 @
+
+\section{For the impatient}
+
+\subsection{Getting started}
+
+To get started, simply input a \code{phylo} object (or a list of
+\code{phylo} objects) and call the \code{tree.plot} function:
+
+<<phylo1, fig=TRUE, width=9, height=3, include=FALSE, keep.source=TRUE>>=
+tree.list <- list()
+for (i in 1:3) {
+  x <- rtree(20)  # Random trees 20 leaves.
+  tree.list[[i]] <- x
+}
+tree.plot(tree.list) # Plot the list of tres.
+@
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=4in]{ggphylo-phylo1}
+\end{center}
+\caption{A few trees.}
+\end{figure}
+
+This is largely similar to the standard \code{plot.phylo} function. It also scales well to several trees:
+
+<<phylo2, fig=TRUE, width=15, height=15, include=FALSE, keep.source=TRUE>>=
+n <- 25
+sizes <- sample(2:20, n, replace=T)
+for (i in 1:n) {
+  tree.list[[i]] <- rtree(sizes[i])
+}
+tree.plot(tree.list, label.size=2) # Plot the list of trees.
+@
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=4in]{ggphylo-phylo2}
+\end{center}
+\caption{Many trees.}
+\end{figure}
+
+\subsection{Plotting data along trees}
+
+An important aspect of \ggplot is its expressive \emph{grammar of
+graphics}, which allows data to be mapped easily and flexibly to any
+visual property. The \ggphylo package hooks into \ggplot by defining three
+visual entities ({\bf lines, nodes, and labels}) and three visual
+properties ({\bf color, alpha, size}). Any combination of entity and
+property can be mapped to a value from the tree. For example, we can
+map {\bf bootstrap} values to {\bf line color}, and {\bf population size}
+values to {\bf node size}:
+
+<<phylo3, fig=TRUE, width=6, height=6, include=FALSE, keep.source=TRUE>>=
+n <- 40;  x <- rtree(n); n.nodes <- length(nodes(x))
+bootstraps <- 100 - rexp(n.nodes, rate=5) * 100
+pop.sizes <- pmax(0, rnorm(n.nodes, mean=50000, sd=50000))
+for (i in nodes(x)) {
+  x <- tree.set.tag(x, i, 'bootstrap', bootstraps[i])
+  x <- tree.set.tag(x, i, 'pop.size', pop.sizes[i])
+}
+tree.plot(x,
+  line.color.by='bootstrap',
+  line.color.scale = scale_colour_gradient(
+    limits=c(50, 100), 
+    low='red', 
+    high='black'
+  ),
+  node.size.by='pop.size',
+  node.size.scale = scale_size_continuous(
+    limits=c(0, 100000),
+    range=c(1, 5)
+  )
+)
+@
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=4in]{ggphylo-phylo3}
+\end{center}
+\caption{A tree with scalar values mapped to branch color and node size.}
+\end{figure}
+
+The previous example covers the main functionality provided by
+\ggphylo: mapping data to visual elements along a tree. Note that, in
+order to store data along the tree, \ggphylo introduces the concept of
+\emph{tags}, which are stored internally as a list object attached to
+each node of a \phylo object. See \ref{section_annotations} for more details.
+
+It should be stressed that \ggplot is an extremely versatile plotting
+system, capable of transforming data in unexpected ways. For example,
+mapping from cartesian to polar coordinates is handled with a single additional command:
+
+<<phylo4, fig=TRUE, width=8, height=8, include=FALSE, keep.source=TRUE>>=
+tree.plot(x,
+  line.color.by='bootstrap',
+  line.color.scale = scale_colour_gradient(
+    limits=c(50, 100), 
+    low='red', 
+    high='black'
+  ),
+  node.size.by='pop.size',
+  node.size.scale = scale_size_continuous(
+    limits=c(0, 100000),
+    range=c(1, 5)
+  ),
+  radial.plot=TRUE
+)
+@
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=5in]{ggphylo-phylo4}
+\end{center}
+\caption{A "radial" tree, drawn in polar coordinates.}
+\end{figure}
+
+
 
 %------------------------------------------------------------------------------
-\section{Loading and plotting a tree}
+
+\section{Attaching annotations to trees}
+\label{section_annotations}
+
+\section{Behind the scenes}
+
+\subsection{Creating data frames from \code{phylo} objects}
 
 The main work of the \ggphylo package is to transform the data from a
-\phylo object into a data frame more appropriate for use with \ggplot. This is normally taken care of internally by the \code{tree.plot} function, but we can see what's happening by calling the \code{tree.layout} method directly:
+\phylo object into a data frame more appropriate for use with \ggplot. First, let's look at the generic as.data.frame method provided by \ggphylo:
 
-<<dendrogram, fig=FALSE, include=TRUE, keep.source=TRUE>>=
+<<phylo, fig=FALSE, include=TRUE, keep.source=TRUE>>=
 tree <- tree.read('((a,b),c);')
-tree.df <- tree.layout(tree)
-print(tree.df)
+print(as.data.frame(tree))
 @
+
 
 \end{document}

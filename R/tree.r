@@ -247,8 +247,14 @@ tree.as.data.frame <- function(tree, order.visually=T) {
     cur.tags[['parent']] <- tree.parent.node(phylo, node)
     cur.tags[['is.leaf']] <- tree.is.leaf(phylo, node)
     cur.tags[['id']] <- node
+    
     tree.df <<- rbind.fill(tree.df, as.data.frame(cur.tags, stringsAsFactors=F))
   })
+
+  # Some fixing-up of the column ordering.
+  init.cols <- c('id', 'label', 'parent', 'branch.length')
+  remaining <- setdiff(colnames(tree.df), init.cols)
+  tree.df <- tree.df[, c(init.cols, remaining)]
 
   if (order.visually) {
     tree.df <- tree.df[order.nodes.visually(tree),]
@@ -446,7 +452,7 @@ tree.branch.length <- function(phylo, node) {
 #' @export
 tree.scale.by <- function(phylo, factor) {
   phylo$edge.length <- phylo$edge.length * factor
-  return(phylo)
+  phylo
 }
 
 #' Scales the tree to a given total branch length.

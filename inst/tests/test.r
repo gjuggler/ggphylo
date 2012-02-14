@@ -109,9 +109,37 @@ test_that("Tree manipulations work", {
   expect_true(tree.has.tags(tree))
   expect_true(tree.get.tag(tree, tree.find(tree, 'b'), 'foo') == 'bar')
 
+  # Scaling.
+  str <- '((a,b),c);'
+  tree <- tree.read(str)
+  tree <- tree.scale.by(tree, 3)
+
 })
 
 context("tree plots")
 test_that("Tree plots work", {
+
+  tree <- tree.read('((a:1,b:1):1,c:1);') # Read in a simple tree.
+  tree.list <- list()
+  for (i in c(1, 2, 3)) {
+    tree.list[[i]] <- tree.scale.by(tree, i)
+  }
+  #print(length(tree.list))
+  #tree.plot(tree.list)
+
+  n <- 40;
+  x <- rtree(n)
+  bootstrap <- runif(length(nodes(x)), min=0, max=100)
+  values2 <- runif(length(nodes(x)), min=0, max=5)
+  for (i in nodes(x)) {
+    x <- tree.set.tag(x, i, 'bootstrap', bootstrap[i])
+    x <- tree.set.tag(x, i, 'v2', values2[i])
+  }
+
+  tree.plot(x,
+    line.color.by='bootstrap',
+    line.color.scale = scale_colour_gradient(low='gray', high='black'),
+    line.size.by='v2'
+  )
 
 })

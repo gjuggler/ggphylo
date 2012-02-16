@@ -30,7 +30,35 @@ test_that("as.data.frame() works as expected", {
   # Not ordering visually gives the normal cladewise order
   x <- as.data.frame(tree, order.visually=F)
   expect_equal(paste(x$label, collapse=' '), 'a b c abc ab')
+
 })
+
+#stop("Stopping for a breath"))
+
+context("tree attaching data")
+test_that("tree.load.data works as expected", {
+  tree <- tree.read('((a,b)c,d)e;')
+  x <- data.frame(
+    label=c('a', 'b', 'c', 'd', 'e', 'f'),
+    value=c(1, 2, 3, 4, 5, 6),
+    stringsAsFactors=F
+  )
+  expect_warning(tree2 <- tree.load.data(tree, x))
+  suppressWarnings(tree <- tree.load.data(tree, x))
+  expect_match(as.character(tree), "NHX")
+  expect_true('value' %in% colnames(as.data.frame(tree)))
+  expect_false('branch.length' %in% colnames(as.data.frame(tree, minimal.columns=T)))
+
+  tree <- tree.read('((a,b),c);')
+  x <- data.frame(
+    label=c('a', 'b', 'c'),
+    xyz=c(1, 2, 3)
+  )
+  tree <- tree.load.data(tree, x)
+  expect_true('xyz' %in% colnames(as.data.frame(tree)))
+})
+
+#stop('Stopping for a minute...')
 
 context("tree I/O")
 test_that("tree I/O and NHX annotations work correctly", {
@@ -67,6 +95,7 @@ test_that("Tree manipulations work", {
 
   # Test find the root.
   expect_equal(tree.get.root(tree), 4)
+  expect_true('t1' %in% labels(tree))
 
   # Test the foreach
   str <- ''
@@ -119,9 +148,28 @@ test_that("Tree manipulations work", {
 
 })
 
+do.tree.plots <- T
+if (do.tree.plots) {
+
 context("tree plots")
 test_that("Tree plots work", {
   pdf(file="~/scratch/test.pdf")
+
+  ggphylo('((h:1,e:1,l:1,l:1,o:1):1,(w:1,o:1,r:1,l:1,d:1):1)')
+
+  x.df <- data.frame(
+    label = c('a', 'b', 'c', 'd', 'e', 'f'),
+    value = c(1, 2, 3, 4, 5, 6)
+  )
+  x1 <- tree.normalize.branchlengths(tree.read('((a,b),c);'))
+  x2 <- tree.normalize.branchlengths(tree.read('((d,e),f);'))
+
+  ggphylo(
+    list('x1'=x1, 'x2'=x2),
+    extra.data = x.df,
+    line.color.by='value',
+    line.size=3
+  )
 
   tree <- tree.read('((a:1,b:1):1,c:1);') # Read in a simple tree.
   tree.list <- list()
@@ -153,6 +201,16 @@ test_that("Tree plots work", {
   x <- tree.normalize.branchlengths(x, push.to.tips=T)
   ggphylo(x, node.color.by='D', x.expand=c(0, 1))
 
+
+  if (require(treebase)) {
+    tree <- search_treebase("Derryberry", "author")[[1]]
+    metadata(tree$S.id)
+    print(str(tree))
+    ggphylo(tree, text.size=1)
+  }
+
   dev.off()
 
 })
+
+}

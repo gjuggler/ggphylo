@@ -1,6 +1,6 @@
 \name{tree.parent.node}
 \alias{tree.parent.node}
-\title{Extracts the parent node ID for the given node. Returns -1 if the node is root.
+\title{Extracts the parent node index for the given node. Returns -1 if the node is root.
 Return the index of the node directly above the given node. Returns -1 if the given node is root.}
 \usage{
   tree.parent.node(phylo, node)
@@ -16,9 +16,9 @@ Return the index of the node directly above the given node. Returns -1 if the gi
   node is root.
 }
 \description{
-  Extracts the parent node ID for the given node. Returns
-  -1 if the node is root. Return the index of the node
-  directly above the given node. Returns -1 if the given
-  node is root.
+  Extracts the parent node index for the given node.
+  Returns -1 if the node is root. Return the index of the
+  node directly above the given node. Returns -1 if the
+  given node is root.
 }
 

@@ -1,7 +1,7 @@
 \name{sort.df.by.tree}
 \alias{sort.df.by.tree}
 \title{Sorts a data frame according to a tree. Requires the data frame to
-have a 'id' column, which corresponds to the index of each node in the tree. Not much error-checking is done here,
+have a 'node' column, which corresponds to the index of each node in the tree. Not much error-checking is done here,
 so be careful! Uses \code{\link{order.nodes.visually}} to sort nodes.}
 \usage{
   sort.df.by.tree(tree.df, phylo)
@@ -9,8 +9,8 @@ so be careful! Uses \code{\link{order.nodes.visually}} to sort nodes.}
 \arguments{
   \item{tree.df,}{a data frame containing one row for each
   node in the tree. This data frame MUST contain a column
-  labeled 'id', which contains, for each row, the index of
-  the corresponding node in the tree.}
+  labeled 'node', which contains, for each row, the index
+  of the corresponding node in the tree.}
 
   \item{phylo,}{input phylo object}
 }
@@ -20,7 +20,7 @@ so be careful! Uses \code{\link{order.nodes.visually}} to sort nodes.}
 }
 \description{
   Sorts a data frame according to a tree. Requires the data
-  frame to have a 'id' column, which corresponds to the
+  frame to have a 'node' column, which corresponds to the
   index of each node in the tree. Not much error-checking
   is done here, so be careful! Uses
   \code{\link{order.nodes.visually}} to sort nodes.

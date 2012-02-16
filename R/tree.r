@@ -18,6 +18,26 @@ leaves <- function(phylo) {
   1:n.leaves
 }
 
+#' Returns labels corresponding to all or some subset of the nodes in a tree.
+#' 
+#' @method labels phylo
+#' @param phylo input phylo object
+#' @param nodes [optional] vector of node indices for which to return labels
+#' @export
+labels.phylo <- function(phylo, nodes=NA) {
+  if (is.null(phylo$node.label)) {
+    node.lbls <- rep(NA, phylo$Nnode)
+  } else {
+    node.lbls <- phylo$node.label
+  }
+  x <- c(phylo$tip.label, node.lbls)
+
+  if (!is.na(nodes)) {
+    x <- x[nodes]
+  }
+  x  
+}
+
 #' Returns the label for the given node. Alias for \code{\link{tree.label.for.node}}. Given
 #' a nice short nickname due to its usefulness.
 #' 
@@ -38,17 +58,26 @@ label <- function(object, ...) {
 #'
 #' @param phylo input phylo object
 #' @param label character, the label to search for in the tree.
+#' @param return.one boolean, TRUE if a maximum of one matching node should be returned, FALSE
+#'   if all matching nodes should be returned. Defaults to TRUE.
 #' @return integer vector corresponding to the indices of all nodes with the given
 #' label. Returns a zero-length vector if no nodes matched.
 #' @export
-tree.node.with.label <- function(phylo, label) {
+tree.node.with.label <- function(phylo, label, return.one=T) {
   all.labels <- c(phylo$tip.label, phylo$node.label)
-  return(which(all.labels %in% label))
+  all.matches <- which(all.labels %in% label)
+  if (length(all.matches) > 1 && return.one) {
+    all.matches[1]
+  } else {
+    all.matches
+  }
 }
 
 #' Returns the index of the node with a given label. Alias for \code{\link{tree.node.with.label}}.
 #' @param phylo input phylo object
 #' @param label character, the label to search for in the tree.
+#' @param return.one boolean, TRUE if a maximum of one matching node should be returned, FALSE
+#'   if all matching nodes should be returned. Defaults to TRUE.
 #' @return integer vector corresponding to the indices of all nodes with the given
 #' label. Returns a zero-length vector if no nodes matched.
 #' @export
@@ -224,6 +253,71 @@ tree.foreach <- function(phylo, fn, leaves=T, nodes=T) {
   }
 }
 
+#' Loads a data.frame or CSV file into a tree as tags. Requires a 'label' column
+#' in the source data, which is used to merge rows in the dataset to labeled nodes
+#' in the tree.
+#'
+#' @param phylo input phylo object
+#' @param x input data.frame or string indicating the location of a CSV file.
+#' @return the phylo object, with tags corresponding to the data from the input
+#'   dataset.
+#' @export
+#' @examples
+#' tree <- tree.read('((a,b)c,d)e;')
+#' x <- data.frame(
+#'   label=c('a', 'b', 'c', 'd', 'e'),
+#'   value=c(1, 2, 3, 4, 5)
+#' )
+#' tree <- tree.load.data(tree, x)
+#' print(as.character(tree)) # as NHX string
+#' print(as.data.frame(tree, minimal.columns=T)) # as data.frame
+tree.load.data <- function(phylo, x, ...) {
+  if (!is.data.frame(x)) {
+    if (is.character(x)) {
+      if (file.exists(x)) {
+        x <- read.csv(x, ...)
+      }
+    }
+    stop("tree.load.data given a bad input: not a data.frame, and not a valid file name.")
+  }
+
+  if (!('label' %in% colnames(x))) {
+    stop("tree.load.data requires a 'label' column in the input data to match rows to
+      nodes in the tree.")
+  }
+
+  if (!tree.has.tags(phylo)) {
+    phylo$.tags <- as.list(rep(NA, length(nodes(phylo))))
+  }
+
+  x$label <- as.character(x$label)
+
+  any.non.matches <- FALSE
+
+  tags <- setdiff(colnames(x), c('label'))
+  for (i in 1:nrow(x)) {
+    lbl <- x[i, 'label']
+    match.node <- tree.find(phylo, lbl)
+    if (length(match.node) > 0) {
+      cur.list <- as.list(x[i,])
+      cur.list[['label']] <- NULL
+      cur.list <- unlist(cur.list, recursive=F)
+      if (!is.list(cur.list)) {
+        cur.list <- as.list(cur.list)
+      }
+      phylo$.tags[[match.node]] <- cur.list
+    } else {
+      any.non.matches <- TRUE
+    }
+  }
+  if (any.non.matches) {
+    warning("tree.load.data found rows in the data that did not match a labeled node in the tree")
+  }
+
+  phylo
+}
+ 
+
 #' Turns a phylo object into a data frame
 #' @method as.data.frame phylo
 #' @seealso \code{\link{tree.as.data.frame}} which this function wraps
@@ -235,40 +329,54 @@ as.data.frame.phylo <- function(x, ...) {
 #' to a node in the tree.
 #'
 #' @param tree input phylo object
+#' @param minimal.columns boolean, whether to yield a limited number of columns. When TRUE, only the
+#'   following columns are produced: 'label', 'node', and columns corresponding to any tags in the
+#'   tree. Defaults to FALSE.
 #' @param order.visually boolean, indicating whether to sort the
 #'   returned data frame according to how the nodes of the tree would be
 #'   arranged along the y-axis in a 2D phylogram plot. (e.g., ((a,b)1,c)2
 #'   would produce an order: [a,1,b,2,c]
 #' @return data frame with at least the following columns:
 #'   \item{label}{string, the node or tip label, or NA}
-#'   \item{depth}{integer, the number of nodes between this node and the
-#'     furthest leaf. Leaves have a depth of 1, and the root node has the highest depth.}
-#'   \item{is_leaf}{boolean, indicates whether this row is a leaf (TRUE) or an internal node (FALSE)}
-#'   \item{parent}{integer, the node index of the parent node (or NA for the root node)}
-#'   \item{id}{integer, the node index of the current node}
+#'   \item{node}{integer, the node index of the current node}
 #' \item{[tags]}{If the phylo object has any attached tags (see
 #'   \code{\link{get.tags}} and \code{\link{get.tag}}), each unique tag will be incorporated as an additional
 #'   column. The \code{\link{rbind.fill}} function from \code{\link{plyr}} is used to combine the tags from different
 #'   nodes into one overall data frame.}
+
+#'   If the parameter \code{minimal.columns} is set to FALSE, the following columns will be added:
+#'   \item{depth}{integer, the number of nodes between this node and the
+#'     furthest leaf. Leaves have a depth of 1, and the root node has the highest depth.}
+#'   \item{is_leaf}{boolean, indicates whether this row is a leaf (TRUE) or an internal node (FALSE)}
+#'   \item{parent}{integer, the node index of the parent node (or NA for the root node)}
 #' @importFrom plyr rbind.fill
-tree.as.data.frame <- function(tree, order.visually=T) {
+tree.as.data.frame <- function(tree, minimal.columns=F, order.visually=T) {
   tree.df <- data.frame(stringsAsFactors=F)
   tree.foreach(tree, function(phylo, node) {
     cur.tags <- tree.get.tags(phylo, node)
     cur.tags[['label']] <- tree.label.for.node(phylo, node)
-    cur.tags[['depth']] <- tree.leaves.beneath(phylo, node)
-    cur.tags[['branch.length']] <- tree.branch.length(phylo, node)
-    cur.tags[['parent']] <- tree.parent.node(phylo, node)
-    cur.tags[['is.leaf']] <- tree.is.leaf(phylo, node)
-    cur.tags[['id']] <- node
+    cur.tags[['node']] <- node    
+    
+    if (!minimal.columns) {
+      cur.tags[['depth']] <- tree.leaves.beneath(phylo, node)
+      cur.tags[['branch.length']] <- tree.branch.length(phylo, node)
+      cur.tags[['parent']] <- tree.parent.node(phylo, node)
+      cur.tags[['is.leaf']] <- tree.is.leaf(phylo, node)
+    }
     
     tree.df <<- rbind.fill(tree.df, as.data.frame(cur.tags, stringsAsFactors=F))
   })
 
   # Some fixing-up of the column ordering.
-  init.cols <- c('id', 'label', 'parent', 'branch.length')
+  init.cols <- c('node', 'label', 'parent', 'branch.length')
+  if (minimal.columns) {
+    init.cols <- c('label', 'node')
+  }
   remaining <- setdiff(colnames(tree.df), init.cols)
-  tree.df <- tree.df[, c(init.cols, remaining)]
+  #print(tree.df)
+  #print(init.cols)
+  #print(remaining)
+  tree.df <- subset(tree.df, select=c(init.cols, remaining))
 
   if (order.visually) {
     tree.df <- tree.df[order.nodes.visually(tree),]
@@ -376,7 +484,7 @@ tree.leaves.beneath <- function(phylo, node) {
 
 
 #' Returns the length from the tree root to the given node. Note: the node
-#' can be given either as a node ID or a tip label.
+#' can be given either as a node index or a tip label.
 #'
 #' @param phylo input phylo object
 #' @param node, either integer or character. When integer, the node
@@ -643,7 +751,7 @@ tree.child.nodes <- function(phylo, node) {
   return(list(nodes))
 }
 
-#' Extracts the parent node ID for the given node. Returns -1 if the node is root.
+#' Extracts the parent node index for the given node. Returns -1 if the node is root.
 #' Return the index of the node directly above the given node. Returns -1 if the given node is root.
 #'
 #' @param phylo, input phylo object
@@ -678,11 +786,11 @@ order.nodes.visually <- function(phylo) {
 }
 
 #' Sorts a data frame according to a tree. Requires the data frame to
-#' have a 'id' column, which corresponds to the index of each node in the tree. Not much error-checking is done here,
+#' have a 'node' column, which corresponds to the index of each node in the tree. Not much error-checking is done here,
 #' so be careful! Uses \code{\link{order.nodes.visually}} to sort nodes.
 #'
 #' @param tree.df, a data frame containing one row for each node in the tree. This data frame MUST contain a column
-#' labeled 'id', which contains, for each row, the index of the corresponding node in the tree.
+#' labeled 'node', which contains, for each row, the index of the corresponding node in the tree.
 #' @param phylo, input phylo object
 #' @return data.frame, the data frame sorted according to the natural visual order of the tree .
 #' @export
@@ -690,7 +798,7 @@ order.nodes.visually <- function(phylo) {
 sort.df.by.tree <- function(tree.df, phylo) {
   phylo.order <- order.nodes.visually(phylo)
 
-  df.order <- match(phylo.order, tree.df$id)
+  df.order <- match(phylo.order, tree.df$node)
   tree.df[df.order, ]
 }
 

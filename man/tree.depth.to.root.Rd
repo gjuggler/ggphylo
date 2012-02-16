@@ -1,7 +1,7 @@
 \name{tree.depth.to.root}
 \alias{tree.depth.to.root}
 \title{Returns the length from the tree root to the given node. Note: the node
-can be given either as a node ID or a tip label.}
+can be given either as a node index or a tip label.}
 \usage{
   tree.depth.to.root(phylo, node)
 }
@@ -14,7 +14,7 @@ can be given either as a node ID or a tip label.}
 }
 \description{
   Returns the length from the tree root to the given node.
-  Note: the node can be given either as a node ID or a tip
-  label.
+  Note: the node can be given either as a node index or a
+  tip label.
 }
 

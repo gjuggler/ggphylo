@@ -118,7 +118,7 @@ tree.read <- function(x, remove.whitespace=F)
 	return(c("", treetext))
     }
     if (is.character(x)) {
-      looks.like.tree.string <- grepl("\\(.*\\).*;", x)
+      looks.like.tree.string <- grepl("\\(.*\\).*;?", x)
       if (looks.like.tree.string || !file.exists(x)) {
         # Parse as a string.
         tree <- x
@@ -133,6 +133,11 @@ tree.read <- function(x, remove.whitespace=F)
     if (identical(tree, character(0))) {
         warning("empty character string.")
         return(NULL)
+    }
+
+    if (!grepl(';', tree)) {
+      # Try adding a semicolon to the end.
+      tree <- paste(tree, ';', sep='')
     }
     
     nhx.matches <- gregexpr("[,\\)\\( ]?([^,\\)\\(]+)?(:?\\d*\\.?\\d*)?\\[.*?\\]", tree)

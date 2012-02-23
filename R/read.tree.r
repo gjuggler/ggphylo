@@ -269,7 +269,7 @@ clado.build <- function(tp)
             if (skeleton[i - 1] != ")") add.terminal()   # add a terminal branch
         }
         if (skeleton[i] == ")") {
-            if (skeleton[i - 1] == ",") {   # add a terminal branch and go down one level
+            if (skeleton[i - 1] != ")") {   # add a terminal branch and go down one level
                 add.terminal()
                 go.down()
             }

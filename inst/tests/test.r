@@ -86,6 +86,13 @@ test_that("tree I/O and NHX annotations work correctly", {
   tree.roundtrip('((a[&&NHX:foo=bar],b[&&NHX:bizz=buzz]),c[&&NHX:ping=pong]);')
   tree.roundtrip('((a[&&NHX:long key with spaces=blah blah blah... blah blah!!],b),c);')
 
+  # Try reading a tree with an "elbow" node
+  str <- '((a, (b)c)d, e)f;'
+  tree <- tree.read(str)
+  node <- tree.find(tree, 'c')
+  child.lbls <- labels(tree, tree.children(tree, node))
+  expect_equal(child.lbls, 'b')
+
 })
 
 context("tree manipulations")
@@ -100,7 +107,10 @@ test_that("Tree manipulations work", {
   # Test the foreach
   str <- ''
   tree.foreach(tree, function(x, i) {
-    str <<- paste(str, tree.get.label(x, i), sep='')
+    lbl <- tree.get.label(x, i)
+    if (!is.na(lbl)) {
+      str <<- paste(str, lbl, sep='')
+    }
   })
   expect_equal(str, 't2t3t1')
 
@@ -146,9 +156,14 @@ test_that("Tree manipulations work", {
   tree <- tree.read(str)
   tree <- tree.scale.by(tree, 3)
 
+  # Find node indices of multiple labels.
+  str <- '((a, b, c, d), (e, f, g, h));';
+  tree <- tree.read(str)
+  expect_true(length(tree.find(tree, c('a', 'b'))) == 2)
+
 })
 
-do.tree.plots <- T
+do.tree.plots <- F
 if (do.tree.plots) {
 
 context("tree plots")

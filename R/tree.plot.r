@@ -74,6 +74,7 @@ ggphylo <- function(
   extra.data=NA,
   layout='default',
   do.plot = T,
+  facet.trees = T,
   plot.internals=F,
   x.lab = "Branch Length",
   x.lim = NA,
@@ -103,8 +104,9 @@ ggphylo <- function(
       )
       out.df
     })
-    trees.df
 
+    layout.df$.id <- factor(layout.df$.id, levels=names(x), labels=names(x), ordered=T)
+    trees.df$.id <- factor(trees.df$.id, levels=names(x), labels=names(x), ordered=T)
   } else {
     if ('PhyloSim' %in% class(x)) {
       phylo <- x$.phylo
@@ -308,7 +310,7 @@ ggphylo <- function(
     q <- q + scale_y_continuous(name=y.lab, limits=leaf.limits)
   }
 
-  if (nrow(trees.df) > 1) {
+  if (nrow(trees.df) > 1 && facet.trees == TRUE) {
     q <- q + facet_wrap( ~ .id)
   }
 

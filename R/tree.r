@@ -63,7 +63,7 @@ label <- function(object, ...) {
 #' @return integer vector corresponding to the indices of all nodes with the given
 #' label. Returns a zero-length vector if no nodes matched.
 #' @export
-tree.node.with.label <- function(phylo, label, return.one=T) {
+tree.node.with.label <- function(phylo, label, return.one=F) {
   all.labels <- c(phylo$tip.label, phylo$node.label)
   all.matches <- which(all.labels %in% label)
   if (length(all.matches) > 1 && return.one) {
@@ -543,13 +543,18 @@ tree.get.label <- function(tree, node) {
 #' @param node integer, the node's index
 #' @return the label for the given node
 #' @export
-tree.label.for.node <- function(tree, node) {
-  if (node <= length(tree$tip.label)) {
-    return(tree$tip.label[node])
-  } else if (node <= (tree$Nnode + length(tree$tip.label))) {
-    node.label.index <- node - length(tree$tip.label)
-    return(tree$node.label[node.label.index])
+tree.label.for.node <- function(phylo, nodes) {
+  if (is.null(phylo$node.label)) {
+    node.lbls <- rep(NA, phylo$Nnode)
+  } else {
+    node.lbls <- phylo$node.label
   }
+  x <- c(phylo$tip.label, node.lbls)
+
+  if (!is.na(nodes)) {
+    x <- x[nodes]
+  }
+  x
 }
 
 #' Extracts the length of the branch above the given node. Returns 0 if the node is root.
@@ -692,6 +697,10 @@ tree.remove.leaf <- function(phylo, leaf) {
   drop.tip(phylo, leaf)
 }
 
+tree.remove.leaves <- function(phylo, leaves) {
+  drop.tip(phylo, leaf)
+}
+
 #' Returns the sub-tree beneath the given node.
 #'
 #' @param phylo, input phylo object
@@ -709,9 +718,9 @@ tree.extract.clade <- function(phylo, node) {
 #' @return phylo, a phylo object containing the minimum spanning sub-tree defined by the given leaf nodes
 #' @export
 tree.extract.subtree <- function(phylo, leaves) {
-  not.in.set <- setdiff(phylo$tip.label, leaves)
-  tree <- drop.tip(tree, not.in.set)
-  tree
+  not.in.set <- setdiff(leaves(phylo), leaves)
+  phylo <- drop.tip(phylo, not.in.set)
+  phylo
 }
 
 #' Determine if the given node is a leaf or an internal node. Alias of \code{\link{tree.is.leaf}}.
@@ -731,6 +740,17 @@ is.leaf.phylo <- function(phylo, node) {
 #' @return boolean, TRUE if the given node is a leaf, FALSE if it is an internal node
 tree.is.leaf <- function(phylo, node) {
   return(node <= length(phylo$tip.label))
+}
+
+tree.children <- function(phylo, node) {
+  edge.indices <- which(phylo$edge[,1]==node)
+  nodes <- phylo$edge[edge.indices,2]
+  if (length(nodes)==0) {
+    nodes <- c()
+  } else {
+    nodes <- nodes
+  }
+  nodes
 }
 
 #' Return a list (not a vector!) of the node indices of the given

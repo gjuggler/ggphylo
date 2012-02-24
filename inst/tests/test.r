@@ -161,6 +161,24 @@ test_that("Tree manipulations work", {
   tree <- tree.read(str)
   expect_true(length(tree.find(tree, c('a', 'b'))) == 2)
 
+  # Check that node tags get carried over when leaves are removed from a tree.
+  a <- tree.read('((a,b[&&NHX:foo=bar])c,(d,e)f)g;')
+  b <- tree.remove.leaves(a, tree.find(tree, 'a'))
+  expect_true(tree.get.tag(b, tree.find(b, 'b'), 'foo') == tree.get.tag(a, tree.find(a, 'b'), 'foo'))
+
+  # Try binding one tree to another.
+  #a <- tree.read('((a, b)c,(d,e)f)g;')
+  #print(as.character(a))
+
+  #st <- tree.extract.clade(a, tree.find(a, 'c'))
+  #print(as.character(st))
+  #print(tree.subtree.leaves(a, tree.find(a, 'c')))
+
+  #xx <- tree.remove.clade(a, tree.find(a, 'c'))
+  #print(as.character(xx))
+
+    
+
 })
 
 do.tree.plots <- F

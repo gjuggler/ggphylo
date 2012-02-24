@@ -164,6 +164,7 @@ tree.get.tags <- function(phylo, node) {
     return(list())
   }
   
+  #print(label(phylo, node))
   tags <- phylo$.tags[[node]]
   #print(paste(label(phylo, node), tags))
   if (is.null(tags) || is.na(tags)) {
@@ -219,6 +220,11 @@ tree.set.tag <- function(phylo, node, tag, value) {
 tree.has.tags <- function(phylo) {
   !is.null(phylo$.tags)
 }
+
+tree.split.above <- function(phylo, node, fraction) {
+  
+}
+
 
 #' Loops over nodes in the tree, applying a function using each node
 #' as an argument. Optionally, either the leaves or internal nodes can
@@ -287,6 +293,7 @@ tree.load.data <- function(phylo, x, ...) {
   }
 
   if (!tree.has.tags(phylo)) {
+    #print("Creating empty tags in phylo object..")
     phylo$.tags <- as.list(rep(NA, length(nodes(phylo))))
   }
 
@@ -377,6 +384,19 @@ tree.as.data.frame <- function(tree, minimal.columns=F, order.visually=T) {
   #print(init.cols)
   #print(remaining)
   tree.df <- subset(tree.df, select=c(init.cols, remaining))
+
+  # Go through and make columns numeric if applicable.
+  cols <- colnames(tree.df)
+  for (col.s in cols) {
+    vals <- tree.df[, col.s]
+    if (!any(is.na(as.numeric(vals)))) {
+      #print(paste("Numeric column:", col.s))
+      tree.df[, col.s] <- as.numeric(tree.df[, col.s])
+    } else {
+      #print(vals)
+    }
+  }
+  
 
   if (order.visually) {
     tree.df <- tree.df[order.nodes.visually(tree),]
@@ -694,11 +714,38 @@ tree.length.to.root <- function(phylo, node) {
 #' @return phylo, a new phylo object with the altered tree structure.
 #' @export
 tree.remove.leaf <- function(phylo, leaf) {
-  drop.tip(phylo, leaf)
+  tree.remove.leaves(phylo, leaf)
 }
 
 tree.remove.leaves <- function(phylo, leaves) {
-  drop.tip(phylo, leaf)
+  cur.df <- as.data.frame(phylo, minimal.columns=T)
+  col.s <- setdiff(colnames(cur.df), 'node')
+  cur.df <- cur.df[, col.s]
+  extra.cols <- setdiff(colnames(cur.df), 'label')
+  if (tree.has.tags(phylo)) {
+    warning("[tree.remove.leaves] Tags found in tree -- tags will be re-applied after tree manipulation, but this requires unique node labels!")
+  }
+
+  phylo$.tags <- NULL
+  p2 <- drop.tip(phylo, leaves)
+  p2 <- tree.load.data(p2, cur.df)
+  p2
+}
+
+tree.remove.outgroup <- function(phylo) {
+  root.n <- tree.get.root(phylo)
+  children <- tree.children(phylo, root.n)
+  child.clade.sizes <- c()
+  for (i in 1:length(children)) {
+    child <- children[i]
+    clade.size <- tree.leaves.beneath(phylo, child)
+    child.clade.sizes[i] <- clade.size
+  }
+  
+  min.index <- which(order(child.clade.sizes) == 1)
+  min.child <- children[min.index]
+
+  tree.remove.clade(phylo, min.child)
 }
 
 #' Returns the sub-tree beneath the given node.
@@ -719,8 +766,33 @@ tree.extract.clade <- function(phylo, node) {
 #' @export
 tree.extract.subtree <- function(phylo, leaves) {
   not.in.set <- setdiff(leaves(phylo), leaves)
-  phylo <- drop.tip(phylo, not.in.set)
+  phylo <- tree.remove.leaves(phylo, not.in.set)
   phylo
+}
+
+tree.subtree.leaves <- function(phylo, node) {
+  if (tree.is.leaf(phylo, node)) {
+    cur.leaves <- c(node)
+  } else {
+    cur.children <- tree.children(phylo, node)
+    cur.leaves <- c()
+    while (length(cur.children) > 0) {
+      cur.child <- cur.children[1]
+      cur.children <- cur.children[-1]
+      if (tree.is.leaf(phylo, cur.child)) {
+        cur.leaves <- c(cur.leaves, cur.child)
+      } else {
+        cur.children <- c(cur.children, tree.children(phylo, cur.child))
+      }
+    }
+  }
+  cur.leaves
+}
+
+tree.remove.clade <- function(phylo, node) {
+  subclade.leaves <- tree.subtree.leaves(phylo, node)
+  remaining.leaves <- setdiff(leaves(phylo), subclade.leaves)
+  tree.extract.subtree(phylo, remaining.leaves)
 }
 
 #' Determine if the given node is a leaf or an internal node. Alias of \code{\link{tree.is.leaf}}.

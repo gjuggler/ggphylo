@@ -48,10 +48,8 @@ tree.read.nhx <- function(str, coming.from.tree.read=F) {
   }
   
   # Parse the Phylo object from the cleaned-up string.
-  #print(str)
   tree <- tree.read(str)
 
-  #print(str(tree))
 
   # Create a list of NHX annotations keyed by the node ID.
   tag.values <- gsub(".*\\[&&NHX:(.*)\\]", "\\1", nhx.strings)
@@ -64,7 +62,11 @@ tree.read.nhx <- function(str, coming.from.tree.read=F) {
     if (length(cur.list) > 0) {
       for (i in 1:length(cur.list)) {
         vec <- cur.list[[i]]
-        list.out[vec[1]] = vec[2]
+        if (!is.na(as.numeric(vec[2]))) {
+          list.out[vec[1]] <- as.numeric(vec[2])
+        } else {
+          list.out[vec[1]] <- vec[2]
+        }
       }
     }
     return(list.out)
@@ -81,7 +83,7 @@ tree.read.nhx <- function(str, coming.from.tree.read=F) {
     
     leaf <- tree.is.leaf(tree, cur.node)
     real.node.name <- names(map.list)[i]
-   if (leaf) {
+    if (leaf) {
       tree$tip.label[cur.node] <- real.node.name
     } else {
       tree$node.label[cur.node-length(tree$tip.label)] <- real.node.name

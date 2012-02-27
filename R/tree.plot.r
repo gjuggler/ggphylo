@@ -75,7 +75,6 @@ ggphylo <- function(
   layout='default',
   do.plot = T,
   facet.trees = T,
-  plot.internals=F,
   x.lab = "Branch Length",
   x.lim = NA,
   x.expand = c(0.05, 0.3),
@@ -134,6 +133,7 @@ ggphylo <- function(
   lines.df <- subset(layout.df, type=='line')
   nodes.df <- subset(layout.df, type=='node')
   labels.df <- subset(layout.df, type=='label')
+  internal.labels.df <- subset(layout.df, type=='internal.label')
 
   max.length <- max(trees.df$max.length)
   max.n <- max(trees.df$n.leaves)
@@ -141,9 +141,16 @@ ggphylo <- function(
   q <- ggplot(lines.df)
 
   args <- list(...)  
-  for (aes.type in c('line', 'node', 'label')) {
+  for (aes.type in c('line', 'node', 'label', 'internal.label')) {
     plot.s <- paste('plot', paste(aes.type, 's', sep=''), sep='.')
-    
+
+    cur.df <- switch(aes.type,
+      'line'=lines.df,
+      'node'=nodes.df,
+      'label'=labels.df,
+      'internal.label'=internal.labels.df
+    )
+
     if (is.null(args[[plot.s]]) || args[[plot.s]] == T) {
       #print(paste(plot.s, args[[plot.s]]))
       aes.list <- switch(aes.type, 
@@ -161,32 +168,33 @@ ggphylo <- function(
           x='x',
           y='y',
           label='label'
+        ),
+        'internal.label' = list(
+          x='x',
+          y='y',
+          label='label'
         )
       )
 
       if (aes.type == 'line') {
         # Sort by y-axis (e.g., branch length) to get better z-axis consistency.
-        lines.df <- lines.df[order(lines.df$yend, lines.df$xend),]
+        cur.df <- cur.df[order(cur.df$yend, cur.df$xend),]
       }
-      if (aes.type == 'label') {
-        if (!plot.internals) {
-          labels.df <- subset(labels.df, is.leaf==TRUE)
-        }
-
+      if (aes.type == 'label' || aes.type == 'internal.label') {
         # Add a bit of margin to the labels
         text.margin <- 1 / 50
         mrgn <- text.margin * max.length
         
         if (layout == 'radial') {
-          labels.df$y <- labels.df$y + mrgn * sin(labels.df$angle / 180 * pi)
-          labels.df$x <- labels.df$x + mrgn * cos(labels.df$angle / 180 * pi)
+          cur.df$y <- cur.df$y + mrgn * sin(cur.df$angle / 180 * pi)
+          cur.df$x <- cur.df$x + mrgn * cos(cur.df$angle / 180 * pi)
           aes.list[['angle']] <- 'pmax((y/(diff(range(y))+1) * -360) %% 360 + 90, (y/(diff(range(y))+1) * -360 - 180) %% 360 + 90)'
           aes.list[['hjust']] <- 'ifelse( (-360 * (y)/(diff(range(y))+1)) %% 360 + 90 > (-360 * (y)/(diff(range(y))+1) - 180) %% 360 + 90, 0, 1);'
         } else {
-          labels.df$hjust <- ifelse((labels.df$angle-90) %% 360 > (labels.df$angle-90+180) %% 360, 0, 1)
-          labels.df$angle <- pmax((labels.df$angle-90) %% 360, (labels.df$angle-90+180) %% 360) + 90
-          labels.df$y <- labels.df$y + mrgn * sin(labels.df$angle / 180 * pi) * ifelse(labels.df$hjust == 1, -1, 1)
-          labels.df$x <- labels.df$x + mrgn * cos(labels.df$angle / 180 * pi) * ifelse(labels.df$hjust == 1, -1, 1)
+          cur.df$hjust <- ifelse((cur.df$angle-90) %% 360 > (cur.df$angle-90+180) %% 360, 0, 1)
+          cur.df$angle <- pmax((cur.df$angle-90) %% 360, (cur.df$angle-90+180) %% 360) + 90
+          cur.df$y <- cur.df$y + mrgn * sin(cur.df$angle / 180 * pi) * ifelse(cur.df$hjust == 1, -1, 1)
+          cur.df$x <- cur.df$x + mrgn * cos(cur.df$angle / 180 * pi) * ifelse(cur.df$hjust == 1, -1, 1)
           aes.list[['angle']] <- 'angle'
           aes.list[['hjust']] <- 'hjust'
         }
@@ -203,21 +211,26 @@ ggphylo <- function(
 
       geom.list <- switch(aes.type,
         'line'=list(
-          data=lines.df,
+          data=cur.df,
           do.call(aes_string, aes.list)
         ),
         'node'=list(
-          data=nodes.df,
+          data=cur.df,
           do.call(aes_string, aes.list)
         ),
         'label'=list(
-          data=labels.df,
+          data=cur.df,
+          vjust=0.5,
+          do.call(aes_string, aes.list)
+        ),
+        'internal.label'=list(
+          data=cur.df,
           vjust=0.5,
           do.call(aes_string, aes.list)
         )
       )      
 
-      if (is.null(aes.list[['hjust']]) && aes.type == 'label') {
+      if (is.null(aes.list[['hjust']]) && (aes.type == 'label' || aes.type == 'internal.label')) {
         geom.list[['hjust']] <- 0
       }
 
@@ -237,11 +250,16 @@ ggphylo <- function(
           color='black',
           size=3,
           alpha=1
+        ),
+        'internal.label'=list(
+          color='black',
+          size=2,
+          alpha=0.7
         )
       )
 
       # Add constant values if there is no aesthetic entry, e.g. node.color='black' => color='black'
-      for (sub.aes in c('color', 'alpha', 'size')) {
+      for (sub.aes in c('color', 'alpha', 'size', 'angle')) {
         constant.key <- ifelse(sub.aes == 'color', 'colour', sub.aes)
         constant.s <- paste(aes.type, sub.aes, sep='.')
         by.s <- paste(aes.type, sub.aes, 'by', sep='.')
@@ -261,7 +279,8 @@ ggphylo <- function(
       geom.fn <- switch(aes.type,
         line='geom_joinedsegment',
         node='geom_point',
-        label='geom_text'
+        label='geom_text',
+        internal.label='geom_text'
       )
       q <- q + do.call(geom.fn, geom.list)
       
@@ -512,7 +531,12 @@ tree.layout <- function(
   df$type <- 'node'
   label.df$type <- 'label'
 
-  all.df <- rbind.fill(line.df, df, label.df)
+  internal.label.df <- subset(label.df, is.leaf==FALSE)
+  internal.label.df$type <- 'internal.label'
+
+  label.df <- subset(label.df, is.leaf==TRUE)  
+
+  all.df <- rbind.fill(line.df, df, label.df, internal.label.df)
   all.df
 }
 

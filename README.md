@@ -6,6 +6,10 @@
  derived from the ape package), and the `ggphylo` function allows one
  to easily visualize data along phylogenetic trees.
 
+# Examples
+
+# More Info
+
 See the
 [vignette](https://github.com/gjuggler/ggphylo/raw/master/inst/doc/ggphylo.pdf)
 for examples of the package's main functionality.

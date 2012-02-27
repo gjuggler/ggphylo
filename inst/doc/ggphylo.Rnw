@@ -103,8 +103,8 @@ ggphylo(tree.list, label.size=2) # Plot the list of trees.
 
 \subsection{Plotting data along trees}
 
-The \ggphylo package defines three visual entities ({\bf lines, nodes,
-and labels}) and three visual properties ({\bf color, alpha, size})
+The \ggphylo package defines four visual entities ({\bf lines, nodes,
+labels, and internal.labels}) and three visual properties ({\bf color, alpha, size})
 for visualizing data along a tree. Any combination of entity and
 property can be used: for example, the following code maps {\bf
 bootstrap} values to {\bf line color}, and {\bf population size}

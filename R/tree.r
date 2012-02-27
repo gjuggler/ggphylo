@@ -164,7 +164,6 @@ tree.get.tags <- function(phylo, node) {
     return(list())
   }
   
-  #print(label(phylo, node))
   tags <- phylo$.tags[[node]]
   #print(paste(label(phylo, node), tags))
   if (is.null(tags) || is.na(tags)) {
@@ -308,7 +307,8 @@ tree.load.data <- function(phylo, x, ...) {
     if (length(match.node) > 0) {
       cur.list <- as.list(x[i,])
       cur.list[['label']] <- NULL
-      cur.list <- unlist(cur.list, recursive=F)
+      # Don't use 'unlist' -- it turns everything into a character vector!!
+      #cur.list <- unlist(cur.list, recursive=F)
       if (!is.list(cur.list)) {
         cur.list <- as.list(cur.list)
       }
@@ -390,7 +390,6 @@ tree.as.data.frame <- function(tree, minimal.columns=F, order.visually=T) {
   for (col.s in cols) {
     vals <- tree.df[, col.s]
     if (!any(is.na(as.numeric(vals)))) {
-      #print(paste("Numeric column:", col.s))
       tree.df[, col.s] <- as.numeric(tree.df[, col.s])
     } else {
       #print(vals)

@@ -347,6 +347,7 @@ is.standard.layout <- function(x) {
 
 #' Returns a data frame defining segments to draw the phylogenetic tree.
 #' 
+#' @importFrom plyr rbind.fill
 #' @export
 tree.layout <- function(
   phylo,

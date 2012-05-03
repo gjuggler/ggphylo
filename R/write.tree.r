@@ -146,5 +146,6 @@ tags.to.nhx.string <- function(tags) {
   if (grepl("[\\[\\]\\:\\;\\,\\=]", paste(key.vals, sep=''))) {
     warning("Bad characters within NHX annotations == probably not a good thing!")
   }
-  paste('[&&NHX:', key.vals, ']', sep='', collapse='')
+  keyval.s <- paste(key.vals, collapse=':')
+  paste('[&&NHX:', keyval.s, ']', sep='', collapse='')
 }

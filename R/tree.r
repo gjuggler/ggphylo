@@ -65,7 +65,8 @@ label <- function(object, ...) {
 #' @export
 tree.node.with.label <- function(phylo, label, return.one=F) {
   all.labels <- c(phylo$tip.label, phylo$node.label)
-  all.matches <- which(all.labels %in% label)
+  all.matches <- match(label, all.labels)
+  print(all.matches)
   if (length(all.matches) > 1 && return.one) {
     all.matches[1]
   } else {
@@ -304,7 +305,7 @@ tree.load.data <- function(phylo, x, ...) {
   for (i in 1:nrow(x)) {
     lbl <- x[i, 'label']
     match.node <- tree.find(phylo, lbl)
-    if (length(match.node) > 0) {
+    if (length(match.node) > 0 && !is.na(match.node)) {
       cur.list <- as.list(x[i,])
       cur.list[['label']] <- NULL
       # Don't use 'unlist' -- it turns everything into a character vector!!
@@ -420,6 +421,25 @@ tree.strip.branchlengths <- function(phylo) {
   phylo$edge.length <- NULL
   phylo
 }
+
+#' Removes branch lengths from a tree
+#'
+#' @param phylo input phylo object
+#' @export
+tree.apply.branchlengths <- function(tree.df, phylo, column='branch.length') {
+  tree.df$label <- as.character(tree.df$label)
+  tree.df <- subset(tree.df, label %in% labels(phylo))
+
+  node.indices <- tree.node.with.label(phylo, tree.df$label)
+  edge.indices <- match(node.indices, phylo$edge[, 2])
+
+  col.values <- tree.df[, column]
+  col.values <- col.values[!is.na(edge.indices)]
+  edge.indices <- edge.indices[!is.na(edge.indices)]
+  phylo$edge.length[edge.indices] <- col.values
+  phylo
+}
+
 
 #' Normalizes the branch lengths of a tree for cleaner 2-dimensional plotting.
 #' 
@@ -891,6 +911,22 @@ sort.df.by.tree <- function(tree.df, phylo) {
 
   df.order <- match(phylo.order, tree.df$node)
   tree.df[df.order, ]
+}
+
+factorize.labels.by.tree <- function(tree.df, phylo, indent.depth=T) {
+  phylo.order <- order.nodes.visually(phylo)
+  phylo.df <- as.data.frame(phylo)
+
+  phylo.df <- ddply(phylo.df, .(node), function(x) {
+    x$label.indent <- paste(x$label, paste(rep(' ', times=(x$depth-1)*2), collapse=''), collapse='')
+    x
+  })
+  node.order <- match(phylo.order, phylo.df$node)
+  phylo.df <- phylo.df[node.order,]
+
+  label.order <- match(tree.df$label, phylo.df$label)
+  new.lbls <- phylo.df$label.indent[label.order]
+  factor(new.lbls, levels=phylo.df$label.indent)
 }
 
 #' Returns TRUE if the given object appears to be a valid tree object for the purposes of this package.

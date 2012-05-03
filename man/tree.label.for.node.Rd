@@ -2,7 +2,7 @@
 \alias{tree.label.for.node}
 \title{Returns the label for a given node in the tree.}
 \usage{
-  tree.label.for.node(tree, node)
+  tree.label.for.node(phylo, nodes)
 }
 \arguments{
   \item{phylo}{input phylo object}

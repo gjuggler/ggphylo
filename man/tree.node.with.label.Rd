@@ -2,7 +2,7 @@
 \alias{tree.node.with.label}
 \title{Returns the index of the node with a given label.}
 \usage{
-  tree.node.with.label(phylo, label, return.one = T)
+  tree.node.with.label(phylo, label, return.one = FALSE)
 }
 \arguments{
   \item{phylo}{input phylo object}

@@ -21,6 +21,7 @@ leaves <- function(phylo) {
 #' Returns labels corresponding to all or some subset of the nodes in a tree.
 #' 
 #' @method labels phylo
+#' @S3method labels phylo
 #' @param phylo input phylo object
 #' @param nodes [optional] vector of node indices for which to return labels
 #' @export
@@ -42,6 +43,7 @@ labels.phylo <- function(phylo, nodes=NA) {
 #' a nice short nickname due to its usefulness.
 #' 
 #' @method label phylo
+#' @S3method label phylo
 #' @param phylo, input phylo object
 #' @param node, the node index for the desired label
 #' @export
@@ -63,10 +65,9 @@ label <- function(object, ...) {
 #' @return integer vector corresponding to the indices of all nodes with the given
 #' label. Returns a zero-length vector if no nodes matched.
 #' @export
-tree.node.with.label <- function(phylo, label, return.one=F) {
+tree.node.with.label <- function(phylo, label, return.one=FALSE) {
   all.labels <- c(phylo$tip.label, phylo$node.label)
   all.matches <- match(label, all.labels)
-  print(all.matches)
   if (length(all.matches) > 1 && return.one) {
     all.matches[1]
   } else {
@@ -108,7 +109,7 @@ tree.get.root <- function(phylo) {
 #' @export
 #' @examples
 #' # Translate a tree of NCBI taxa to their common names
-#' taxon.tree <- read.tree('((9606,9598),9593);')
+#' taxon.tree <- tree.read('((9606,9598),9593);')
 #' taxon.map <- list('9606'='Human', '9598'='Chimpanzee', '9593'='Gorilla')
 #' readable.tree <- tree.translate(taxon.tree, taxon.map)
 #' print(as.character(readable.tree)) # ((Human,Chimpanzee),Gorilla)
@@ -176,6 +177,7 @@ tree.get.tags <- function(phylo, node) {
 
 #' Retrieves a list of all tags for the given node. Convenience wrapper around \code{\link{tree.get.tags}}.
 #' @method tags phylo
+#' @S3method tags phylo
 #' @export
 tags.phylo <- function(phylo, node) {
   tree.get.tags(phylo, node)
@@ -197,7 +199,7 @@ tags <- function(object, ...) {
 #' @export
 #' @examples
 #' tree <- tree.read('((a,b),c)d;')
-#' tree.set.tag(tree, tree.find('b'), 'foo', 'bar')
+#' tree.set.tag(tree, tree.find(tree, 'b'), 'foo', 'bar')
 tree.set.tag <- function(phylo, node, tag, value) {
   if (!tree.has.tags(phylo)) {
     phylo$.tags <- as.list(rep(NA, length(nodes(phylo))))
@@ -242,7 +244,7 @@ tree.split.above <- function(phylo, node, fraction) {
 #'   str <<- paste(str, ' ', tree.get.label(x, i), '=', tree.depth.to.root(x, i), sep='')
 #' })
 #' print(str)
-tree.foreach <- function(phylo, fn, leaves=T, nodes=T) {
+tree.foreach <- function(phylo, fn, leaves=TRUE, nodes=TRUE) {
   n.leaves <- length(phylo$tip.label)
   n.internals <- phylo$Nnode
 
@@ -276,7 +278,7 @@ tree.foreach <- function(phylo, fn, leaves=T, nodes=T) {
 #' )
 #' tree <- tree.load.data(tree, x)
 #' print(as.character(tree)) # as NHX string
-#' print(as.data.frame(tree, minimal.columns=T)) # as data.frame
+#' print(as.data.frame(tree, minimal.columns=TRUE)) # as data.frame
 tree.load.data <- function(phylo, x, ...) {
   if (!is.data.frame(x)) {
     if (is.character(x)) {
@@ -309,7 +311,7 @@ tree.load.data <- function(phylo, x, ...) {
       cur.list <- as.list(x[i,])
       cur.list[['label']] <- NULL
       # Don't use 'unlist' -- it turns everything into a character vector!!
-      #cur.list <- unlist(cur.list, recursive=F)
+      #cur.list <- unlist(cur.list, recursive=FALSE)
       if (!is.list(cur.list)) {
         cur.list <- as.list(cur.list)
       }
@@ -328,6 +330,7 @@ tree.load.data <- function(phylo, x, ...) {
 
 #' Turns a phylo object into a data frame
 #' @method as.data.frame phylo
+#' @S3method as.data.frame phylo
 #' @seealso \code{\link{tree.as.data.frame}} which this function wraps
 as.data.frame.phylo <- function(x, ...) {
   tree.as.data.frame(x, ...)
@@ -345,21 +348,24 @@ as.data.frame.phylo <- function(x, ...) {
 #'   arranged along the y-axis in a 2D phylogram plot. (e.g., ((a,b)1,c)2
 #'   would produce an order: [a,1,b,2,c]
 #' @return data frame with at least the following columns:
+#'   \enumerate{
 #'   \item{label}{string, the node or tip label, or NA}
 #'   \item{node}{integer, the node index of the current node}
 #' \item{[tags]}{If the phylo object has any attached tags (see
 #'   \code{\link{get.tags}} and \code{\link{get.tag}}), each unique tag will be incorporated as an additional
 #'   column. The \code{\link{rbind.fill}} function from \code{\link{plyr}} is used to combine the tags from different
 #'   nodes into one overall data frame.}
-
+#'   }
 #'   If the parameter \code{minimal.columns} is set to FALSE, the following columns will be added:
+#'   \enumerate{
 #'   \item{depth}{integer, the number of nodes between this node and the
 #'     furthest leaf. Leaves have a depth of 1, and the root node has the highest depth.}
 #'   \item{is_leaf}{boolean, indicates whether this row is a leaf (TRUE) or an internal node (FALSE)}
 #'   \item{parent}{integer, the node index of the parent node (or NA for the root node)}
+#'   }
 #' @importFrom plyr rbind.fill
-tree.as.data.frame <- function(tree, minimal.columns=F, order.visually=T) {
-  tree.df <- data.frame(stringsAsFactors=F)
+tree.as.data.frame <- function(tree, minimal.columns=FALSE, order.visually=TRUE) {
+  tree.df <- data.frame(stringsAsFactors=FALSE)
   tree.foreach(tree, function(phylo, node) {
     cur.tags <- tree.get.tags(phylo, node)
     cur.tags[['label']] <- tree.label.for.node(phylo, node)
@@ -372,7 +378,7 @@ tree.as.data.frame <- function(tree, minimal.columns=F, order.visually=T) {
       cur.tags[['is.leaf']] <- tree.is.leaf(phylo, node)
     }
     
-    tree.df <<- rbind.fill(tree.df, as.data.frame(cur.tags, stringsAsFactors=F))
+    tree.df <<- rbind.fill(tree.df, as.data.frame(cur.tags, stringsAsFactors=FALSE))
   })
 
   # Some fixing-up of the column ordering.
@@ -454,10 +460,10 @@ tree.apply.branchlengths <- function(tree.df, phylo, column='branch.length') {
 #' @export
 #' @examples
 #' set.seed(1); x <- rcoal(15)
-#' x1 <- tree.normalize.branchlengths(x, push.to.tips=T)
-#' x2 <- tree.normalize.branchlengths(x, push.to.tips=F)
-#' tree.plot(list('push.to.tips=T'=x1, 'push.to.tips=F'=x2), do.plot=T)
-tree.normalize.branchlengths <- function(phylo, push.to.tips=F) {
+#' x1 <- tree.normalize.branchlengths(x, push.to.tips=TRUE)
+#' x2 <- tree.normalize.branchlengths(x, push.to.tips=FALSE)
+#' ggphylo(list('push.to.tips=TRUE'=x1, 'push.to.tips=FALSE'=x2), do.plot=TRUE)
+tree.normalize.branchlengths <- function(phylo, push.to.tips=FALSE) {
   n.leaves <- length(phylo$tip.label)
   n.nodes <- length(phylo$tip.label)+phylo$Nnode
 
@@ -643,7 +649,7 @@ tree.scale.to <- function(phylo, total.length) {
 #' @return numeric, the sum of all branch lengths in the tree.
 #' @export
 tree.total.branch.length <- function(phylo) {
-  sum(phylo$edge.length, na.rm=T)
+  sum(phylo$edge.length, na.rm=TRUE)
 }
 
 #' Returns the maximum root-to-tip branch length in the tree. The
@@ -737,7 +743,7 @@ tree.remove.leaf <- function(phylo, leaf) {
 }
 
 tree.remove.leaves <- function(phylo, leaves) {
-  cur.df <- as.data.frame(phylo, minimal.columns=T)
+  cur.df <- as.data.frame(phylo, minimal.columns=TRUE)
   col.s <- setdiff(colnames(cur.df), 'node')
   cur.df <- cur.df[, col.s]
   extra.cols <- setdiff(colnames(cur.df), 'label')
@@ -816,6 +822,7 @@ tree.remove.clade <- function(phylo, node) {
 
 #' Determine if the given node is a leaf or an internal node. Alias of \code{\link{tree.is.leaf}}.
 #' @method is.leaf phylo
+#' @S3method is.leaf phylo
 #' @param phylo, input phylo object
 #' @param node, integer index of the desired node to test
 #' @return boolean, TRUE if the given node is a leaf, FALSE if it is an internal node
@@ -826,6 +833,7 @@ is.leaf.phylo <- function(phylo, node) {
 #' Determine if the given node is a leaf or an internal node.
 #' 
 #' @method is.leaf phylo
+#' @S3method is.leaf phylo
 #' @param phylo, input phylo object
 #' @param node, integer index of the desired node to test
 #' @return boolean, TRUE if the given node is a leaf, FALSE if it is an internal node
@@ -889,7 +897,7 @@ tree.parent.node <- function(phylo, node) {
 order.nodes.visually <- function(phylo) {
   phylo <- reorder(phylo, order="cladewise");
   df.list <- tree.layout(phylo,
-    layout.ancestors=T
+    layout.ancestors=TRUE
   )
   
   nodes <- subset(df.list, type=='node')
@@ -913,7 +921,7 @@ sort.df.by.tree <- function(tree.df, phylo) {
   tree.df[df.order, ]
 }
 
-factorize.labels.by.tree <- function(tree.df, phylo, indent.depth=T) {
+factorize.labels.by.tree <- function(tree.df, phylo, indent.depth=TRUE) {
   phylo.order <- order.nodes.visually(phylo)
   phylo.df <- as.data.frame(phylo)
 

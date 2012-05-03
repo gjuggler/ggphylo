@@ -10,6 +10,7 @@
 #'   will be used to match each row in the data to a node in the input tree(s). Defaults to NA.
 #' @param layout a string indicating how the tree will be laid out. Defaults to 'defualt'.
 #'   Available layouts include:
+#'   \enumerate{
 #'   \item{default} The 'default' layout, which arranges the tree in the standard 'phylogram' 
 #'     arrangement with branch length along the x-axis and tree nodes evenly spaced along
 #'     the y-axis.
@@ -18,6 +19,7 @@
 #'     according to its size.
 #'   \item{radial} The 'radial' layout, which is equivalent to the 'default' layout but plotted
 #'     in polar coordinates.
+#'   }
 #' @param do.plot a boolean indicating whether the plot should be printed to the current
 #'   graphics device. When FALSE, the plot is not printed; the graphics grob is silently returned.
 #'   Defaults to TRUE.
@@ -36,9 +38,10 @@
 #' @param [line|node|label].[size|color|alpha].by string, indicating the name of a tag value by
 #'   which to modulate the given visual property. A value of 0 will be given to nodes which
 #'   do not contain the given tag, and unless a 'x.y.scale' parameter is given (see below),
-#'   the default \ggplot scaling and size/color/alpha rules will be applied.
+#'   the default \code{\link{ggplot}} scaling and size/color/alpha rules will be applied.
 #'   The combination of 3 visual elements and 3 visual properties creates 9 possible parameters
 #'   to choose from:
+#'   \enumerate{
 #'   \item{line.size.by}
 #'   \item{line.color.by}
 #'   \item{line.alpha.by}
@@ -48,16 +51,20 @@
 #'   \item{label.size.by}
 #'   \item{label.color.by}
 #'   \item{label.alpha.by}
+#'   }
 #' @param [line|node|label].[size|color|alpha].scale function, used in conjunction with a
 #'   corresponding 'x.y.by' parameter (e.g. node.scale.by) to specify the type, limits and range
 #'   of the visual scaling. The value is usually the result of one of the \code{\link{ggplot}}
 #'   scale convenience functions, such as:
+#'   \enumerate{
 #'     \item{node.size.scale=scale_size_continuous(limits=c(0,100), range=c(1, 5))}
+#'   }
 #'   In this example, 'limits' controls the range of tag values to be shown, and 'range'
 #'   controls the range of the resulting visual scale (i.e. the node size will range from 1 to 5).
 #'   See \code{\link{scale_size_continuous}} or the other ggplot scale_x_y functions for more info.
 #' @param [line|node|label].[size|color|alpha] string or numeric, used to specify a constant
 #'   value for a visual parameter if no data-based scaling is specified. Default values are:
+#'   \enumerate{
 #'   \item{line.size} 1
 #'   \item{line.color} '#888888'
 #'   \item{line.alpha} 1
@@ -67,6 +74,7 @@
 #'   \item{label.size} 3
 #'   \item{label.color} 'black'
 #'   \item{label.alpha} 1
+#'   }
 #' @return the \code{\link{ggplot}} grob list.
 #' @export
 ggphylo <- function(

@@ -14,6 +14,7 @@ Author: Gregory Jordan <gjuggler@gmail.com>
 Depends:
     ape,
     ggplot2,
+    gridExtra,
     proto,
     plyr
 Enhances: ape

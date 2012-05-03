@@ -2,7 +2,7 @@
 \alias{tree.normalize.branchlengths}
 \title{Normalizes the branch lengths of a tree for cleaner 2-dimensional plotting.}
 \usage{
-  tree.normalize.branchlengths(phylo, push.to.tips = F)
+  tree.normalize.branchlengths(phylo, push.to.tips = FALSE)
 }
 \arguments{
   \item{phylo}{input phylo object}
@@ -24,8 +24,8 @@
 }
 \examples{
 set.seed(1); x <- rcoal(15)
-x1 <- tree.normalize.branchlengths(x, push.to.tips=T)
-x2 <- tree.normalize.branchlengths(x, push.to.tips=F)
-tree.plot(list('push.to.tips=T'=x1, 'push.to.tips=F'=x2), do.plot=T)
+x1 <- tree.normalize.branchlengths(x, push.to.tips=TRUE)
+x2 <- tree.normalize.branchlengths(x, push.to.tips=FALSE)
+ggphylo(list('push.to.tips=TRUE'=x1, 'push.to.tips=FALSE'=x2), do.plot=TRUE)
 }
 

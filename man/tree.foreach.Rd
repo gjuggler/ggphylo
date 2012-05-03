@@ -4,7 +4,7 @@
 as an argument. Optionally, either the leaves or internal nodes can
 be dropped from the iteration.}
 \usage{
-  tree.foreach(phylo, fn, leaves = T, nodes = T)
+  tree.foreach(phylo, fn, leaves = TRUE, nodes = TRUE)
 }
 \arguments{
   \item{phylo}{input phylo object}

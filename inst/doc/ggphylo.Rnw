@@ -174,7 +174,7 @@ print(b.node.index)
 
 x <- tree.set.tag(tree, tree.find(tree, 'b'), 'foo', 'bar')
 print(as.character(x))
-print(as.data.frame(x, minimal.columns=T))
+print(as.data.frame(x, minimal.columns=TRUE))
 @
 
 Note that the above code uses a few of the convenience functions
@@ -193,7 +193,7 @@ stores it as tags in the returned \phylo object:
 
 <<phylo5, fig=FALSE, keep.source=TRUE>>=
 x <- tree.read.nhx('((a,b[&&NHX:foo=bar]),c[&&NHX:bizz=buzz]);')
-print(as.data.frame(x, minimal.columns=T))
+print(as.data.frame(x, minimal.columns=TRUE))
 @
 
 It's useful to test how robust the tree parsing and writing functions
@@ -222,7 +222,7 @@ x <- data.frame(
 )
 print(x)
 tree <- tree.load.data(tree, x)
-print(as.data.frame(tree, minimal.columns=T))
+print(as.data.frame(tree, minimal.columns=TRUE))
 @
 
 }

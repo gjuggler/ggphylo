@@ -20,7 +20,7 @@
 }
 \examples{
 # Translate a tree of NCBI taxa to their common names
-taxon.tree <- read.tree('((9606,9598),9593);')
+taxon.tree <- tree.read('((9606,9598),9593);')
 taxon.map <- list('9606'='Human', '9598'='Chimpanzee', '9593'='Gorilla')
 readable.tree <- tree.translate(taxon.tree, taxon.map)
 print(as.character(readable.tree)) # ((Human,Chimpanzee),Gorilla)

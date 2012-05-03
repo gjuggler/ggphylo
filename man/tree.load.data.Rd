@@ -30,6 +30,6 @@ x <- data.frame(
 )
 tree <- tree.load.data(tree, x)
 print(as.character(tree)) # as NHX string
-print(as.data.frame(tree, minimal.columns=T)) # as data.frame
+print(as.data.frame(tree, minimal.columns=TRUE)) # as data.frame
 }
 

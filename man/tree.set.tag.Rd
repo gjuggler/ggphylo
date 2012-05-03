@@ -25,6 +25,6 @@ same tree structure with the new tag in place.}
 }
 \examples{
 tree <- tree.read('((a,b),c)d;')
-tree.set.tag(tree, tree.find('b'), 'foo', 'bar')
+tree.set.tag(tree, tree.find(tree, 'b'), 'foo', 'bar')
 }
 

@@ -2,7 +2,7 @@
 \alias{write.nhx}
 \title{Writes the phylo object to disk in NHX format.}
 \usage{
-  \method{write.nhx}{} (phylo, f)
+  \method{write.nhx}{phylo} (phylo, f)
 }
 \arguments{
   \item{tree}{input phylo object}

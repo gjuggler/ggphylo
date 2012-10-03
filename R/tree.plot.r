@@ -328,7 +328,7 @@ ggphylo <- function(
   if (layout == 'radial') {
     q <- q + scale_y_continuous(limits=c(0, max.n), name='')
     q <- q + scale_x_continuous(name=x.lab)
-    q <- q + coord_polar(expand=F, theta="y")
+    q <- q + coord_polar(theta="y")
     q <- q + opts(axis.text.x=theme_blank())
   } else {
     #q <- q + coord_flip()
@@ -633,6 +633,7 @@ theme_phylo_black <- function() {
 
 #' Create a geom_joinedsegment which joins together segments with 'round' corners. Looks MUCH nicer.
 #' See https://groups.google.com/forum/?fromgroups#!topic/ggplot2/movv0f_MSuY
+
 GeomJoinedSegment <- proto(ggplot2:::GeomSegment, {
  objname <- "geom_joinedsegment"
  draw <- function(., data, scales, coordinates, arrow=NULL, ...) {

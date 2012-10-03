@@ -129,7 +129,6 @@ tree.tags.to.labels <- function(phylo) {
 
 #' Writes the phylo object to disk in NHX format.
 #' 
-#' @S3method write.nhx phylo
 #' @method write.nhx phylo
 #' @param tree input phylo object
 #' @param file the file to write to
